@@ -115,9 +115,9 @@ def init_db():
 def home():
     if 'user_id' in session:
         if session['role'] == 'admin':
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('login'))
         else:
-            return redirect(url_for('student_dashboard'))
+            return redirect(url_for('login'))
     return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
