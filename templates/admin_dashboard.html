@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Quiz Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">Quiz Management System - Admin Panel</h1>
+            <div class="flex items-center space-x-4">
+                <span>Welcome, {{ session.username }}</span>
+                <a href="/logout" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Logout</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mx-auto p-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">Dashboard</h2>
+            <a href="/admin/quiz/new" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Create New Quiz</a>
+        </div>
+        
+        <!-- Success/Error Messages -->
+        <div id="messageContainer" class="mb-4"></div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Quizzes Section -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4">Your Quizzes</h3>
+                
+                {% if quizzes %}
+                <div class="space-y-4">
+                    {% for quiz in quizzes %}
+                    <div class="border p-4 rounded relative">
+                        <h4 class="font-semibold">{{ quiz.title }}</h4>
+                        <p class="text-sm text-gray-600">{{ quiz.description }}</p>
+                        <p class="text-sm">Passing Score: {{ quiz.passing_score }}%</p>
+                        <div class="mt-2 flex space-x-2">
+                            <a href="/admin/quiz/{{ quiz.id }}" class="text-blue-500 hover:text-blue-700 text-sm">View Details & Results</a>
+                            <button onclick="editQuiz('{{ quiz.id }}')" class="text-yellow-500 hover:text-yellow-700 text-sm">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button onclick="confirmDeleteQuiz('{{ quiz.id }}', '{{ quiz.title }}')" class="text-red-500 hover:text-red-700 text-sm">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500">You haven't created any quizzes yet.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Users Section -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4">Registered Users</h3>
+                
+                {% if users %}
+                <div class="space-y-3">
+                    {% for user in users %}
+                    <div class="border p-3 rounded flex justify-between items-center">
+                        <div>
+                            <h4 class="font-semibold">{{ user.username }}</h4>
+                            <p class="text-sm text-gray-600">{{ user.email }} ({{ user.role }})</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-gray-500">{{ user.created_at.strftime('%Y-%m-%d') }}</span>
+                            <button onclick="editUser('{{ user.id }}')" class="text-yellow-500 hover:text-yellow-700">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="confirmDeleteUser('{{ user.id }}', '{{ user.username }}')" class="text-red-500 hover:text-red-700">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500">No users registered yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4" id="modalTitle">Confirm Delete</h3>
+            <p class="mb-4" id="modalMessage">Are you sure you want to delete this item?</p>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelDelete" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded">Cancel</button>
+                <button id="confirmDelete" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Edit Modal -->
+    <div id="quizEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Edit Quiz</h3>
+            <form id="quizEditForm">
+                <input type="hidden" id="editQuizId">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editQuizTitle">Title</label>
+                    <input type="text" id="editQuizTitle" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editQuizDescription">Description</label>
+                    <textarea id="editQuizDescription" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="3" required></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editQuizPassingScore">Passing Score (%)</label>
+                    <input type="number" id="editQuizPassingScore" min="1" max="100" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelQuizEdit" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Edit Modal -->
+    <div id="userEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Edit User</h3>
+            <form id="userEditForm">
+                <input type="hidden" id="editUserId">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editUsername">Username</label>
+                    <input type="text" id="editUsername" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editEmail">Email</label>
+                    <input type="email" id="editEmail" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editRole">Role</label>
+                    <select id="editRole" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelUserEdit" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Variables to track what we're deleting
+        let itemToDelete = null;
+        let deleteType = null;
+        
+        // DOM Elements
+        const deleteModal = document.getElementById('deleteModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const cancelDeleteBtn = document.getElementById('cancelDelete');
+        const confirmDeleteBtn = document.getElementById('confirmDelete');
+        
+        const quizEditModal = document.getElementById('quizEditModal');
+        const quizEditForm = document.getElementById('quizEditForm');
+        const cancelQuizEditBtn = document.getElementById('cancelQuizEdit');
+        
+        const userEditModal = document.getElementById('userEditModal');
+        const userEditForm = document.getElementById('userEditForm');
+        const cancelUserEditBtn = document.getElementById('cancelUserEdit');
+        
+        // Show message function
+        function showMessage(message, type = 'success') {
+            const messageContainer = document.getElementById('messageContainer');
+            messageContainer.innerHTML = `
+                <div class="p-4 rounded ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                    ${message}
+                </div>
+            `;
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                messageContainer.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Quiz functions
+        function editQuiz(quizId) {
+            // In a real application, you would fetch the quiz data from the server
+            // For this example, we'll simulate with dummy data
+            document.getElementById('editQuizId').value = quizId;
+            document.getElementById('editQuizTitle').value = `Quiz ${quizId} Title`;
+            document.getElementById('editQuizDescription').value = `Description for quiz ${quizId}`;
+            document.getElementById('editQuizPassingScore').value = Math.floor(Math.random() * 30) + 70;
+            
+            quizEditModal.classList.remove('hidden');
+        }
+        
+        function confirmDeleteQuiz(quizId, quizTitle) {
+            itemToDelete = quizId;
+            deleteType = 'quiz';
+            modalTitle.textContent = 'Delete Quiz';
+            modalMessage.textContent = `Are you sure you want to delete the quiz "${quizTitle}"? This action cannot be undone.`;
+            deleteModal.classList.remove('hidden');
+        }
+        
+        // User functions
+        function editUser(userId) {
+            // In a real application, you would fetch the user data from the server
+            // For this example, we'll simulate with dummy data
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUsername').value = `user${userId}`;
+            document.getElementById('editEmail').value = `user${userId}@example.com`;
+            document.getElementById('editRole').value = userId % 3 === 0 ? 'admin' : 'user';
+            
+            userEditModal.classList.remove('hidden');
+        }
+        
+        function confirmDeleteUser(userId, username) {
+            itemToDelete = userId;
+            deleteType = 'user';
+            modalTitle.textContent = 'Delete User';
+            modalMessage.textContent = `Are you sure you want to delete the user "${username}"? All their data will be permanently removed.`;
+            deleteModal.classList.remove('hidden');
+        }
+        
+        // Event Listeners
+        cancelDeleteBtn.addEventListener('click', () => {
+            deleteModal.classList.add('hidden');
+            itemToDelete = null;
+            deleteType = null;
+        });
+        
+        confirmDeleteBtn.addEventListener('click', () => {
+            // In a real application, you would make an API call to delete the item
+            if (deleteType === 'quiz') {
+                // API call to delete quiz would go here
+                showMessage(`Quiz ${itemToDelete} has been deleted successfully.`);
+            } else if (deleteType === 'user') {
+                // API call to delete user would go here
+                showMessage(`User ${itemToDelete} has been deleted successfully.`);
+            }
+            
+            deleteModal.classList.add('hidden');
+            itemToDelete = null;
+            deleteType = null;
+        });
+        
+        cancelQuizEditBtn.addEventListener('click', () => {
+            quizEditModal.classList.add('hidden');
+        });
+        
+        quizEditForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // In a real application, you would make an API call to update the quiz
+            const quizId = document.getElementById('editQuizId').value;
+            const title = document.getElementById('editQuizTitle').value;
+            
+            // API call to update quiz would go here
+            showMessage(`Quiz "${title}" has been updated successfully.`);
+            quizEditModal.classList.add('hidden');
+        });
+        
+        cancelUserEditBtn.addEventListener('click', () => {
+            userEditModal.classList.add('hidden');
+        });
+        
+        userEditForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // In a real application, you would make an API call to update the user
+            const userId = document.getElementById('editUserId').value;
+            const username = document.getElementById('editUsername').value;
+            
+            // API call to update user would go here
+            showMessage(`User "${username}" has been updated successfully.`);
+            userEditModal.classList.add('hidden');
+        });
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === deleteModal) {
+                deleteModal.classList.add('hidden');
+            }
+            if (e.target === quizEditModal) {
+                quizEditModal.classList.add('hidden');
+            }
+            if (e.target === userEditModal) {
+                userEditModal.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

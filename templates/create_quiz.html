@@ -1,0 +1,162 @@
+<!-- templates/create_quiz.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Quiz - Quiz Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        let questionCount = 1;
+        
+        function addQuestion() {
+            questionCount++;
+            const questionsContainer = document.getElementById('questions-container');
+            
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'border p-4 rounded mb-4 question';
+            questionDiv.innerHTML = `
+                <h4 class="font-semibold mb-2">Question ${questionCount}</h4>
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Question Text</label>
+                    <input type="text" name="question_text" class="border rounded w-full py-1 px-2" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Question Type</label>
+                    <select name="question_type" class="border rounded w-full py-1 px-2" onchange="toggleOptions(this)">
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="true_false">True/False</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3 options-field">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Options (separated by |)</label>
+                    <input type="text" name="options" class="border rounded w-full py-1 px-2" placeholder="Option1|Option2|Option3|Option4" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Correct Answer</label>
+                    <input type="text" name="correct_answer" class="border rounded w-full py-1 px-2" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Points</label>
+                    <input type="number" name="points" value="1" min="1" class="border rounded w-full py-1 px-2" required>
+                </div>
+                
+                <button type="button" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm" onclick="removeQuestion(this)">Remove Question</button>
+            `;
+            
+            questionsContainer.appendChild(questionDiv);
+        }
+        
+        function removeQuestion(button) {
+            if (document.querySelectorAll('.question').length > 1) {
+                button.closest('.question').remove();
+                // Renumber questions
+                const questions = document.querySelectorAll('.question');
+                questions.forEach((question, index) => {
+                    question.querySelector('h4').textContent = `Question ${index + 1}`;
+                });
+                questionCount = questions.length;
+            }
+        }
+        
+        function toggleOptions(select) {
+            const optionsField = select.closest('.question').querySelector('.options-field');
+            if (select.value === 'true_false') {
+                optionsField.querySelector('input').value = 'True|False';
+                optionsField.querySelector('input').disabled = true;
+            } else {
+                optionsField.querySelector('input').value = '';
+                optionsField.querySelector('input').disabled = false;
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">Quiz Management System - Create Quiz</h1>
+            <div class="flex items-center space-x-4">
+                <span>Welcome, {{ session.username }}</span>
+                <a href="/admin/dashboard" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Back to Dashboard</a>
+                <a href="/logout" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Logout</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mx-auto p-4">
+        <h2 class="text-2xl font-bold mb-6">Create New Quiz</h2>
+        
+        <form method="POST" class="bg-white p-6 rounded-lg shadow-md">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="title">
+                    Quiz Title
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                       id="title" name="title" type="text" placeholder="Quiz Title" required>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="description">
+                    Description
+                </label>
+                <textarea class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                          id="description" name="description" placeholder="Quiz Description" rows="3"></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="passing_score">
+                    Passing Score (%)
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
+                       id="passing_score" name="passing_score" type="number" min="1" max="100" value="60" required>
+            </div>
+            
+            <h3 class="text-xl font-semibold mb-4">Questions</h3>
+            <div id="questions-container">
+                <div class="border p-4 rounded mb-4 question">
+                    <h4 class="font-semibold mb-2">Question 1</h4>
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Question Text</label>
+                        <input type="text" name="question_text" class="border rounded w-full py-1 px-2" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Question Type</label>
+                        <select name="question_type" class="border rounded w-full py-1 px-2" onchange="toggleOptions(this)">
+                            <option value="multiple_choice">Multiple Choice</option>
+                            <option value="true_false">True/False</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3 options-field">
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Options (separated by |)</label>
+                        <input type="text" name="options" class="border rounded w-full py-1 px-2" placeholder="Option1|Option2|Option3|Option4" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Correct Answer</label>
+                        <input type="text" name="correct_answer" class="border rounded w-full py-1 px-2" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Points</label>
+                        <input type="number" name="points" value="1" min="1" class="border rounded w-full py-1 px-2" required>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded mb-6" onclick="addQuestion()">Add Another Question</button>
+            
+            <div class="flex items-center justify-between">
+                <button class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                    Create Quiz
+                </button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

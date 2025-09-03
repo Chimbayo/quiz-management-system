@@ -1,0 +1,64 @@
+<!-- templates/attempt_quiz.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attempt Quiz - Quiz Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">Quiz Management System</h1>
+            <div class="flex items-center space-x-4">
+                <span>Welcome, {{ session.username }}</span>
+                <a href="/student/dashboard" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Back to Dashboard</a>
+                <a href="/logout" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Logout</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container mx-auto p-4">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold mb-2">{{ quiz.title }}</h2>
+            <p class="text-gray-600 mb-6">{{ quiz.description }}</p>
+            
+            <form method="POST">
+                {% for question in questions %}
+                <div class="border p-4 rounded mb-4">
+                    <h3 class="font-semibold mb-2">{{ loop.index }}. {{ question.question_text }}</h3>
+                    <p class="text-sm text-gray-500 mb-3">({{ question.points }} point{% if question.points > 1 %}s{% endif %})</p>
+                    
+                    {% if question.question_type == 'true_false' %}
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input type="radio" id="question_{{ question.id }}_true" name="question_{{ question.id }}" value="True" class="mr-2" required>
+                            <label for="question_{{ question.id }}_true">True</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="question_{{ question.id }}_false" name="question_{{ question.id }}" value="False" class="mr-2">
+                            <label for="question_{{ question.id }}_false">False</label>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="space-y-2">
+                        {% for option in question.options %}
+                        <div class="flex items-center">
+                            <input type="radio" id="question_{{ question.id }}_{{ loop.index }}" name="question_{{ question.id }}" value="{{ option }}" class="mr-2" required>
+                            <label for="question_{{ question.id }}_{{ loop.index }}">{{ option }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                
+                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Submit Quiz
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
