@@ -318,6 +318,130 @@ def view_quiz(quiz_id):
     
     return render_template('view_quiz.html', quiz=quiz, questions=questions, attempts=attempts)
 
+@app.route('/admin/quiz/<int:quiz_id>/questions', methods=['GET'])
+def get_questions_for_quiz(quiz_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        # Ensure quiz belongs to admin
+        cur.execute("SELECT id FROM quizzes WHERE id = %s AND created_by = %s", (quiz_id, session['user_id']))
+        if not cur.fetchone():
+            return jsonify({'error': 'Quiz not found or unauthorized'}), 404
+
+        cur.execute("SELECT id, question_text, question_type, options, correct_answer, points FROM questions WHERE quiz_id = %s ORDER BY id ASC", (quiz_id,))
+        questions = cur.fetchall()
+        # Convert options JSON to list if needed
+        result = []
+        for q in questions:
+            row = dict(q)
+            # If options is stored as JSON text, psycopg2 may return as list already due to JSONB
+            if isinstance(row.get('options'), str):
+                try:
+                    row['options'] = json.loads(row['options'])
+                except Exception:
+                    row['options'] = []
+            result.append(row)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/question/get/<int:question_id>', methods=['GET'])
+def get_question(question_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        cur.execute("""
+            SELECT q.id, q.quiz_id, q.question_text, q.question_type, q.options, q.correct_answer, q.points
+            FROM questions q
+            JOIN quizzes z ON q.quiz_id = z.id
+            WHERE q.id = %s AND z.created_by = %s
+        """, (question_id, session['user_id']))
+        q = cur.fetchone()
+        if not q:
+            return jsonify({'error': 'Question not found or unauthorized'}), 404
+        row = dict(q)
+        if isinstance(row.get('options'), str):
+            try:
+                row['options'] = json.loads(row['options'])
+            except Exception:
+                row['options'] = []
+        return jsonify(row), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/question/edit/<int:question_id>', methods=['POST'])
+def edit_question(question_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.get_json() or {}
+    question_text = data.get('question_text')
+    question_type = data.get('question_type')
+    options = data.get('options') or []
+    correct_answer = data.get('correct_answer')
+    points = data.get('points')
+
+    if not question_text or not correct_answer or not question_type:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    if question_type not in ['multiple_choice', 'true_false']:
+        return jsonify({'error': 'Invalid question type'}), 400
+
+    if question_type == 'multiple_choice' and not isinstance(options, list):
+        return jsonify({'error': 'Options must be a list for multiple_choice'}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Ensure question belongs to a quiz owned by current admin
+        cur.execute("""
+            SELECT q.id FROM questions q
+            JOIN quizzes z ON q.quiz_id = z.id
+            WHERE q.id = %s AND z.created_by = %s
+        """, (question_id, session['user_id']))
+        if not cur.fetchone():
+            return jsonify({'error': 'Question not found or unauthorized'}), 404
+
+        cur.execute(
+            """
+            UPDATE questions
+            SET question_text = %s,
+                question_type = %s,
+                options = %s,
+                correct_answer = %s,
+                points = %s
+            WHERE id = %s
+            """,
+            (
+                question_text,
+                question_type,
+                json.dumps(options) if options else json.dumps([]),
+                correct_answer,
+                int(points) if points is not None else 1,
+                question_id
+            )
+        )
+        conn.commit()
+        return jsonify({'message': 'Question updated successfully'}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
 @app.route('/admin/quiz/delete/<int:quiz_id>', methods=['DELETE'])
 def delete_quiz(quiz_id):
     if 'user_id' not in session or session.get('role') != 'admin':

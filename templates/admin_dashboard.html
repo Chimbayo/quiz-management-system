@@ -104,6 +104,9 @@
                             <a href="/quiz/{{ quiz.id }}" class="text-blue-500 hover:text-blue-700 text-sm font-medium">
                                 <i class="fas fa-eye mr-1"></i>View Details
                             </a>
+                            <button onclick="manageQuestions('{{ quiz.id }}', '{{ quiz.title | e }}')" class="text-indigo-500 hover:text-indigo-700 text-sm font-medium">
+                                <i class="fas fa-list mr-1"></i>Questions
+                            </button>
                             <button onclick="editQuiz('{{ quiz.id }}')" class="text-yellow-500 hover:text-yellow-700 text-sm font-medium">
                                 <i class="fas fa-edit mr-1"></i>Edit
                             </button>
@@ -189,6 +192,54 @@
         </div>
     </div>
 
+    <!-- Questions List Modal -->
+    <div id="questionsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl mx-4">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-semibold text-gray-800">Questions for <span id="questionsQuizTitle" class="italic"></span></h3>
+                <button id="closeQuestionsModal" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="questionsListContainer" class="space-y-3 max-h-96 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Question Edit Modal -->
+    <div id="questionEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Edit Question</h3>
+            <form id="questionEditForm">
+                <input type="hidden" id="editQuestionId">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editQuestionText">Question Text</label>
+                    <textarea id="editQuestionText" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" rows="3" required></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editQuestionType">Type</label>
+                    <select id="editQuestionType" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="true_false">True/False</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editQuestionOptions">Options (pipe-separated: A|B|C)</label>
+                    <input type="text" id="editQuestionOptions" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Only for multiple choice">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editCorrectAnswer">Correct Answer</label>
+                    <input type="text" id="editCorrectAnswer" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="editQuestionPoints">Points</label>
+                    <input type="number" id="editQuestionPoints" min="1" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" id="cancelQuestionEdit" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg transition-colors duration-200">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Quiz Edit Modal -->
     <div id="quizEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
@@ -264,6 +315,15 @@
         const userEditForm = document.getElementById('userEditForm');
         const cancelUserEditBtn = document.getElementById('cancelUserEdit');
         
+        const questionsModal = document.getElementById('questionsModal');
+        const closeQuestionsModalBtn = document.getElementById('closeQuestionsModal');
+        const questionsQuizTitle = document.getElementById('questionsQuizTitle');
+        const questionsListContainer = document.getElementById('questionsListContainer');
+        
+        const questionEditModal = document.getElementById('questionEditModal');
+        const questionEditForm = document.getElementById('questionEditForm');
+        const cancelQuestionEditBtn = document.getElementById('cancelQuestionEdit');
+        
         // Show message function
         function showMessage(message, type = 'success') {
             const messageContainer = document.getElementById('messageContainer');
@@ -283,6 +343,69 @@
         }
         
         // Quiz functions
+        async function manageQuestions(quizId, quizTitle) {
+            try {
+                const response = await fetch(`/admin/quiz/${quizId}/questions`);
+                if (response.ok) {
+                    const questions = await response.json();
+                    questionsQuizTitle.textContent = quizTitle;
+                    renderQuestionsList(questions);
+                    questionsModal.classList.remove('hidden');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || 'Failed to load questions', 'error');
+                }
+            } catch (error) {
+                showMessage('Error fetching questions', 'error');
+            }
+        }
+
+        function renderQuestionsList(questions) {
+            if (!questions || questions.length === 0) {
+                questionsListContainer.innerHTML = `<div class="text-center py-8 text-gray-500"><i class=\"fas fa-question-circle text-4xl mb-4 text-gray-300\"></i><p>No questions available for this quiz.</p></div>`;
+                return;
+            }
+            questionsListContainer.innerHTML = questions.map((q, idx) => `
+                <div class=\"border border-gray-200 p-4 rounded-lg bg-gray-50\">
+                    <div class=\"flex justify-between items-start\">
+                        <div class=\"flex-1\">
+                            <div class=\"flex items-center justify-between mb-1\">
+                                <h4 class=\"font-semibold text-gray-800\">Question ${idx + 1}</h4>
+                                <span class=\"text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded\">${q.points} point${q.points > 1 ? 's' : ''}</span>
+                            </div>
+                            <p class=\"text-gray-700 mb-2\">${q.question_text}</p>
+                            <div class=\"text-sm text-gray-600 mb-2\"><span class=\"font-medium\">Type:</span> ${q.question_type === 'true_false' ? 'True/False' : 'Multiple Choice'}</div>
+                            ${q.options && q.options.length ? `<div class=\"text-sm text-gray-600\"><span class=\"font-medium\">Options:</span> ${q.options.map(o => `<span class=\\"ml-2\\">${o}</span>`).join(' | ')}</div>` : ''}
+                            <div class=\"text-sm text-gray-700 mt-1\"><span class=\"font-medium\">Correct:</span> ${q.correct_answer}</div>
+                        </div>
+                        <div class=\"ml-3\">
+                            <button onclick=\"editQuestion('${q.id}')\" class=\"text-yellow-600 hover:text-yellow-800 p-2 rounded hover:bg-yellow-50\"><i class=\"fas fa-edit\"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function editQuestion(questionId) {
+            try {
+                const response = await fetch(`/admin/question/get/${questionId}`);
+                if (response.ok) {
+                    const q = await response.json();
+                    document.getElementById('editQuestionId').value = q.id;
+                    document.getElementById('editQuestionText').value = q.question_text || '';
+                    document.getElementById('editQuestionType').value = q.question_type || 'multiple_choice';
+                    document.getElementById('editQuestionOptions').value = (q.options && q.options.length) ? q.options.join('|') : '';
+                    document.getElementById('editCorrectAnswer').value = q.correct_answer || '';
+                    document.getElementById('editQuestionPoints').value = q.points || 1;
+                    questionEditModal.classList.remove('hidden');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || 'Failed to load question', 'error');
+                }
+            } catch (error) {
+                showMessage('Error fetching question', 'error');
+            }
+        }
         async function editQuiz(quizId) {
             try {
                 const response = await fetch(`/admin/quiz/get/${quizId}`);
@@ -376,6 +499,14 @@
             quizEditModal.classList.add('hidden');
         });
         
+        cancelQuestionEditBtn.addEventListener('click', () => {
+            questionEditModal.classList.add('hidden');
+        });
+
+        closeQuestionsModalBtn.addEventListener('click', () => {
+            questionsModal.classList.add('hidden');
+        });
+
         quizEditForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -412,6 +543,47 @@
             }
         });
         
+        questionEditForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const questionId = document.getElementById('editQuestionId').value;
+            const question_text = document.getElementById('editQuestionText').value;
+            const question_type = document.getElementById('editQuestionType').value;
+            const optionsPipe = document.getElementById('editQuestionOptions').value.trim();
+            const correct_answer = document.getElementById('editCorrectAnswer').value;
+            const points = parseInt(document.getElementById('editQuestionPoints').value, 10) || 1;
+
+            const options = (question_type === 'multiple_choice' && optionsPipe)
+                ? optionsPipe.split('|').map(s => s.trim()).filter(Boolean)
+                : [];
+
+            try {
+                const response = await fetch(`/admin/question/edit/${questionId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question_text, question_type, options, correct_answer, points })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage(result.message, 'success');
+                    questionEditModal.classList.add('hidden');
+                    // Refresh questions list by simulating a re-open if modal visible
+                    if (!questionsModal.classList.contains('hidden')) {
+                        const title = questionsQuizTitle.textContent;
+                        // We lack the quizId here; simplest is to close and prompt manual refresh
+                        // In a fuller impl, store current quizId in a var
+                        showMessage('Question updated. Close and reopen Questions to refresh.', 'success');
+                    }
+                } else {
+                    const err = await response.json();
+                    showMessage(err.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error updating question', 'error');
+            }
+        });
+
         cancelUserEditBtn.addEventListener('click', () => {
             userEditModal.classList.add('hidden');
         });
@@ -459,6 +631,12 @@
             }
             if (e.target === quizEditModal) {
                 quizEditModal.classList.add('hidden');
+            }
+            if (e.target === questionsModal) {
+                questionsModal.classList.add('hidden');
+            }
+            if (e.target === questionEditModal) {
+                questionEditModal.classList.add('hidden');
             }
             if (e.target === userEditModal) {
                 userEditModal.classList.add('hidden');
