@@ -93,43 +93,39 @@
 
             <!-- Attempts Section -->
             <div class="bg-white p-6 rounded-lg shadow-md">
-                <h3 class="text-xl font-semibold mb-4 text-gray-800">
-                    <i class="fas fa-chart-line mr-2 text-green-500"></i>Quiz Attempts
-                </h3>
-                
-                {% if attempts %}
-                <div class="space-y-3">
-                    {% for attempt in attempts %}
-                    <div class="border p-4 rounded-lg {% if attempt.passed %}border-green-200 bg-green-50{% else %}border-red-200 bg-red-50{% endif %}">
-                        <div class="flex justify-between items-center mb-2">
-                            <h4 class="font-semibold text-gray-800">{{ attempt.username }}</h4>
-                            <span class="text-sm font-bold {% if attempt.passed %}text-green-600{% else %}text-red-600{% endif %}">
-                                {{ attempt.score|round(1) }}%
-                            </span>
-                        </div>
-                        <div class="flex justify-between items-center text-sm text-gray-600">
-                            <span>{% if attempt.passed %}✅ Passed{% else %}❌ Failed{% endif %}</span>
-                            <span>{{ attempt.attempted_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
-                        </div>
-                    </div>
-                    {% endfor %}
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-chart-line mr-2 text-green-500"></i>Quiz Attempts
+                    </h3>
+                    {% if session.role == 'admin' %}
+                    <a href="/admin/quiz/{{ quiz.id }}/attempts.csv" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+                        <i class="fas fa-download mr-2"></i>Download CSV
+                    </a>
+                    {% endif %}
                 </div>
                 
-                <!-- Statistics -->
-                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                    <h4 class="font-semibold text-gray-800 mb-3">Attempt Statistics</h4>
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-blue-600">{{ attempts|length }}</div>
-                            <div class="text-gray-600">Total Attempts</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-2xl font-bold text-green-600">
-                                {{ attempts|selectattr('passed', 'equalto', true)|list|length }}
-                            </div>
-                            <div class="text-gray-600">Passed</div>
-                        </div>
-                    </div>
+                {% if attempts %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border border-gray-200 rounded-lg overflow-hidden">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700 border-b">Student</th>
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700 border-b">Score (%)</th>
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700 border-b">Result</th>
+                                <th class="px-4 py-2 text-left text-sm font-semibold text-gray-700 border-b">Attempted At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attempt in attempts %}
+                            <tr class="odd:bg-white even:bg-gray-50">
+                                <td class="px-4 py-2 text-sm text-gray-800">{{ attempt.username }}</td>
+                                <td class="px-4 py-2 text-sm font-semibold {% if attempt.passed %}text-green-600{% else %}text-red-600{% endif %}">{{ attempt.score|round(1) }}%</td>
+                                <td class="px-4 py-2 text-sm">{% if attempt.passed %}Passed{% else %}Failed{% endif %}</td>
+                                <td class="px-4 py-2 text-sm text-gray-600">{{ attempt.attempted_at.strftime('%B %d, %Y %I:%M %p') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
                 {% else %}
                 <div class="text-center py-8 text-gray-500">

@@ -354,6 +354,57 @@ def view_quiz(quiz_id):
     
     return render_template('view_quiz.html', quiz=quiz, questions=questions, attempts=attempts)
 
+@app.route('/admin/quiz/<int:quiz_id>/attempts.csv')
+def export_quiz_attempts_csv(quiz_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        # Ensure admin owns the quiz
+        cur.execute("SELECT id, title FROM quizzes WHERE id = %s AND created_by = %s", (quiz_id, session['user_id']))
+        quiz = cur.fetchone()
+        if not quiz:
+            return jsonify({'error': 'Quiz not found or unauthorized'}), 404
+
+        cur.execute(
+            """
+            SELECT u.username, u.email, qa.score, qa.passed, qa.attempted_at
+            FROM quiz_attempts qa
+            JOIN users u ON qa.user_id = u.id
+            WHERE qa.quiz_id = %s
+            ORDER BY qa.attempted_at DESC
+            """,
+            (quiz_id,)
+        )
+        rows = cur.fetchall()
+
+        # Build CSV
+        import csv
+        from io import StringIO
+        si = StringIO()
+        writer = csv.writer(si)
+        writer.writerow(['Username', 'Email', 'Score (%)', 'Passed', 'Attempted At'])
+        for r in rows:
+            writer.writerow([r['username'], r['email'], round(r['score'] or 0, 2), 'Yes' if r['passed'] else 'No', r['attempted_at']])
+
+        output = si.getvalue()
+        from flask import Response
+        filename = f"quiz_{quiz_id}_attempts.csv"
+        return Response(
+            output,
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': f'attachment; filename={filename}'
+            }
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
 @app.route('/admin/quiz/<int:quiz_id>/questions', methods=['GET'])
 def get_questions_for_quiz(quiz_id):
     if 'user_id' not in session or session.get('role') != 'admin':
