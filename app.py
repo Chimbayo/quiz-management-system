@@ -86,6 +86,28 @@ def init_db():
         )
     ''')
     
+    # Ensure ON DELETE CASCADE on quiz_attempts.quiz_id (best-effort for existing DBs)
+    try:
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.table_constraints tc
+                    WHERE tc.constraint_name = 'quiz_attempts_quiz_id_fkey'
+                      AND tc.table_name = 'quiz_attempts'
+                ) THEN
+                    ALTER TABLE quiz_attempts DROP CONSTRAINT quiz_attempts_quiz_id_fkey;
+                END IF;
+            END$$;
+        """)
+        cur.execute("""
+            ALTER TABLE quiz_attempts
+            ADD CONSTRAINT quiz_attempts_quiz_id_fkey
+            FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
+        """)
+    except Exception:
+        pass
+    
     # Create answers table
     cur.execute('''
         CREATE TABLE IF NOT EXISTS user_answers (
@@ -452,7 +474,9 @@ def delete_quiz(quiz_id):
         if not cur.fetchone():
             return jsonify({'error': 'Quiz not found or unauthorized'}), 404
         
-        # Delete quiz (cascade will handle questions and attempts)
+        # First delete attempts explicitly to avoid FK issues on older schemas
+        cur.execute("DELETE FROM quiz_attempts WHERE quiz_id = %s", (quiz_id,))
+        # Delete quiz (questions are removed via ON DELETE CASCADE on questions.quiz_id)
         cur.execute("DELETE FROM quizzes WHERE id = %s", (quiz_id,))
         conn.commit()
         
