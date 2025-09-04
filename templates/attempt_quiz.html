@@ -27,7 +27,7 @@
             
             // Update navigation buttons
             document.getElementById('prev-btn').disabled = questionNum === 1;
-            document.getElementById('next-btn').textContent = questionNum === totalQuestions ? 'Submit Quiz' : 'Next Question';
+            document.getElementById('next-btn').textContent = questionNum === totalQuestions ? '' : 'Next Question';
             document.getElementById('next-btn').className = questionNum === totalQuestions ? 
                 'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200' :
                 'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200';
