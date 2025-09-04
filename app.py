@@ -55,10 +55,16 @@ def init_db():
             description TEXT,
             created_by INTEGER REFERENCES users(id),
             passing_score INTEGER DEFAULT 60,
+            duration_minutes INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    # Ensure duration column exists for older DBs
+    try:
+        cur.execute("ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS duration_minutes INTEGER DEFAULT 0")
+    except Exception:
+        pass
     
     # Create questions table
     cur.execute('''
@@ -249,6 +255,7 @@ def create_quiz():
         title = request.form['title']
         description = request.form['description']
         passing_score = int(request.form['passing_score'])
+        duration_minutes = int(request.form.get('duration_minutes', 0) or 0)
         
         conn = get_db_connection()
         cur = conn.cursor()
@@ -257,10 +264,10 @@ def create_quiz():
             # Create quiz
             cur.execute(
                 """
-                INSERT INTO quizzes (title, description, created_by, passing_score) 
-                VALUES (%s, %s, %s, %s) RETURNING id
+                INSERT INTO quizzes (title, description, created_by, passing_score, duration_minutes) 
+                VALUES (%s, %s, %s, %s, %s) RETURNING id
                 """,
-                (title, description, session['user_id'], passing_score)
+                (title, description, session['user_id'], passing_score, duration_minutes)
             )
             quiz_id = cur.fetchone()[0]
             

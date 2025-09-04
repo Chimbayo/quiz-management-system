@@ -10,6 +10,9 @@
     <script>
         let currentQuestion = 1;
         const totalQuestions = {{ questions|length }};
+        const durationMinutes = {{ quiz.duration_minutes or 0 }};
+        let remainingSeconds = durationMinutes > 0 ? durationMinutes * 60 : 0;
+        let countdownTimer = null;
         
         function showQuestion(questionNum) {
             // Hide all questions
@@ -76,9 +79,33 @@
             return true;
         }
         
-        // Initialize first question
+        function startCountdown() {
+            if (durationMinutes <= 0) return;
+            const timerEl = document.getElementById('countdown-timer');
+            const formEl = document.getElementById('quiz-form');
+            function render() {
+                const m = Math.floor(remainingSeconds / 60);
+                const s = remainingSeconds % 60;
+                timerEl.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+            }
+            render();
+            countdownTimer = setInterval(() => {
+                remainingSeconds -= 1;
+                if (remainingSeconds <= 0) {
+                    clearInterval(countdownTimer);
+                    render();
+                    // Auto-submit
+                    formEl.submit();
+                } else {
+                    render();
+                }
+            }, 1000);
+        }
+
+        // Initialize first question and timer
         document.addEventListener('DOMContentLoaded', function() {
             showQuestion(1);
+            startCountdown();
         });
     </script>
 </head>
@@ -144,11 +171,17 @@
                         </div>
                         <div class="text-sm text-gray-600">Total Points</div>
                     </div>
+                    {% if quiz.duration_minutes and quiz.duration_minutes > 0 %}
+                    <div class="bg-red-50 p-3 rounded-lg md:col-span-3">
+                        <div class="text-sm text-gray-600">Time Remaining</div>
+                        <div id="countdown-timer" class="text-2xl font-bold text-red-600">--:--</div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             
             <!-- Quiz Form -->
-            <form method="POST" onsubmit="return validateForm()" class="bg-white p-6 rounded-lg shadow-md">
+            <form id="quiz-form" method="POST" onsubmit="return validateForm()" class="bg-white p-6 rounded-lg shadow-md">
                 {% for question in questions %}
                 <div id="question-{{ loop.index }}" class="question-container {% if loop.index != 1 %}hidden{% endif %}">
                     <div class="border border-gray-200 p-6 rounded-lg mb-6">
