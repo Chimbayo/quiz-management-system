@@ -1,5 +1,5 @@
 # app.py (Main Flask Application)
-from flask import Flask, request, jsonify, session, render_template, redirect, url_for
+from flask import Flask, request, jsonify, session, render_template, redirect, url_for, flash
 from flask_cors import CORS
 import psycopg2
 import psycopg2.extras
@@ -22,11 +22,11 @@ CORS(app)
 # Database connection
 def get_db_connection():
     conn = psycopg2.connect(
-        host=os.getenv('DB_HOST'),
-        database=os.getenv('DB_NAME'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        port=os.getenv('DB_PORT')
+        host=os.getenv('DB_HOST', 'localhost'),
+        database=os.getenv('DB_NAME', 'quiz_db'),
+        user=os.getenv('DB_USER', 'postgres'),
+        password=os.getenv('DB_PASSWORD', 'password'),
+        port=os.getenv('DB_PORT', '5432')
     )
     return conn
 
@@ -115,9 +115,9 @@ def init_db():
 def home():
     if 'user_id' in session:
         if session['role'] == 'admin':
-            return redirect(url_for('login'))
+            return redirect(url_for('admin_dashboard'))
         else:
-            return redirect(url_for('login'))
+            return redirect(url_for('student_dashboard'))
     return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -139,9 +139,11 @@ def register():
                 (username, email, hashed_password, role)
             )
             conn.commit()
+            flash('Registration successful! Please login.', 'success')
             return redirect(url_for('login'))
         except psycopg2.IntegrityError:
-            return "Username or email already exists", 400
+            flash('Username or email already exists.', 'error')
+            return render_template('register.html')
         finally:
             cur.close()
             conn.close()
@@ -173,13 +175,15 @@ def login():
             else:
                 return redirect(url_for('student_dashboard'))
         else:
-            return "Invalid credentials", 401
+            flash('Invalid credentials. Please try again.', 'error')
+            return render_template('login.html')
     
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
     session.clear()
+    flash('You have been logged out successfully.', 'success')
     return redirect(url_for('login'))
 
 @app.route('/admin/dashboard')
@@ -198,10 +202,25 @@ def admin_dashboard():
     cur.execute("SELECT id, username, email, role, created_at FROM users ORDER BY created_at DESC")
     users = cur.fetchall()
     
+    # Get statistics
+    cur.execute("SELECT COUNT(*) FROM quizzes")
+    total_quizzes = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM users WHERE role = 'student'")
+    total_students = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM quiz_attempts")
+    total_attempts = cur.fetchone()[0]
+    
     cur.close()
     conn.close()
     
-    return render_template('admin_dashboard.html', quizzes=quizzes, users=users)
+    return render_template('admin_dashboard.html', 
+                         quizzes=quizzes, 
+                         users=users, 
+                         total_quizzes=total_quizzes,
+                         total_students=total_students,
+                         total_attempts=total_attempts)
 
 @app.route('/admin/quiz/new', methods=['GET', 'POST'])
 def create_quiz():
@@ -216,186 +235,69 @@ def create_quiz():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Create quiz
-        cur.execute(
-            """
-            INSERT INTO quizzes (title, description, created_by, passing_score) 
-            VALUES (%s, %s, %s, %s) RETURNING id
-            """,
-            (title, description, session['user_id'], passing_score)
-        )
-        quiz_id = cur.fetchone()[0]
-        
-        # Collect question-related data
-        questions = request.form.getlist('question_text')
-        question_types = request.form.getlist('question_type')
-        options_list = request.form.getlist('options')
-        correct_answers = request.form.getlist('correct_answer')
-        points_list = request.form.getlist('points')
-        
-        # Insert questions safely using zip
-        for question, q_type, option_str, correct, points in zip(
-            questions, question_types, options_list, correct_answers, points_list
-        ):
-            options = option_str.split('|') if option_str else []
-            
+        try:
+            # Create quiz
             cur.execute(
                 """
-                INSERT INTO questions 
-                (quiz_id, question_text, question_type, options, correct_answer, points) 
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO quizzes (title, description, created_by, passing_score) 
+                VALUES (%s, %s, %s, %s) RETURNING id
                 """,
-                (quiz_id, question, q_type, json.dumps(options), correct, int(points))
+                (title, description, session['user_id'], passing_score)
             )
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        
-        return redirect(url_for('admin_dashboard'))
+            quiz_id = cur.fetchone()[0]
+            
+            # Collect question-related data
+            questions = request.form.getlist('question_text')
+            question_types = request.form.getlist('question_type')
+            options_list = request.form.getlist('options')
+            correct_answers = request.form.getlist('correct_answer')
+            points_list = request.form.getlist('points')
+            
+            # Insert questions safely using zip
+            for question, q_type, option_str, correct, points in zip(
+                questions, question_types, options_list, correct_answers, points_list
+            ):
+                if question.strip():  # Only insert if question text is not empty
+                    options = option_str.split('|') if option_str else []
+                    
+                    cur.execute(
+                        """
+                        INSERT INTO questions 
+                        (quiz_id, question_text, question_type, options, correct_answer, points) 
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        """,
+                        (quiz_id, question, q_type, json.dumps(options), correct, int(points))
+                    )
+            
+            conn.commit()
+            flash('Quiz created successfully!', 'success')
+            return redirect(url_for('admin_dashboard'))
+            
+        except Exception as e:
+            conn.rollback()
+            flash(f'Error creating quiz: {str(e)}', 'error')
+            return render_template('create_quiz.html')
+        finally:
+            cur.close()
+            conn.close()
     
     return render_template('create_quiz.html')
 
-@app.route('/admin/quiz/<int:quiz_id>')
+@app.route('/quiz/<int:quiz_id>')
 def view_quiz(quiz_id):
-    if 'user_id' not in session or session['role'] != 'admin':
+    if 'user_id' not in session:
         return redirect(url_for('login'))
     
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-# ===== QUIZ MANAGEMENT ROUTES =====
-
-@app.route('/admin/quiz/delete/<int:quiz_id>', methods=['DELETE'])
-def delete_quiz(quiz_id):
-    if 'username' not in session or session.get('role') != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-    
-    # Find and remove the quiz (replace with your database logic)
-    quiz_to_delete = next((q for q in quizzes if q['id'] == quiz_id), None)
-    
-    if quiz_to_delete:
-        # Remove from your data store (replace with your actual data deletion logic)
-        quizzes = [q for q in quizzes if q['id'] != quiz_id]
-        return jsonify({'message': 'Quiz deleted successfully'}), 200
-    else:
-        return jsonify({'error': 'Quiz not found'}), 404
-
-@app.route('/admin/quiz/edit/<int:quiz_id>', methods=['POST'])
-def edit_quiz(quiz_id):
-    if 'username' not in session or session.get('role') != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-
-    data = request.get_json()
-    title = data.get('title')
-    description = data.get('description')
-    passing_score = data.get('passing_score')
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM quizzes WHERE id = %s", (quiz_id,))
-    quiz = cur.fetchone()
-    if not quiz:
-        cur.close()
-        conn.close()
-        return jsonify({'error': 'Quiz not found'}), 404
-
-    cur.execute(
-        "UPDATE quizzes SET title = %s, description = %s, passing_score = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s",
-        (title, description, passing_score, quiz_id)
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({'message': 'Quiz updated successfully'}), 200
-
-@app.route('/admin/quiz/get/<int:quiz_id>', methods=['GET'])
-def get_quiz(quiz_id):
-    if 'username' not in session or session.get('role') != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-    
-    # Find the quiz using the database
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cur.execute("SELECT * FROM quizzes WHERE id = %s", (quiz_id,))
-    quiz = cur.fetchone()
-    cur.close()
-    conn.close()
-    
-    if quiz:
-        return jsonify(dict(quiz)), 200
-    else:
-        return jsonify({'error': 'Quiz not found'}), 404
-
-# ===== USER MANAGEMENT ROUTES =====
-
-@app.route('/admin/user/delete/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    if 'username' not in session or session.get('role') != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-    
-    # Prevent self-deletion
-    if user_id == session.get('user_id'):
-        return jsonify({'error': 'Cannot delete your own account'}), 400
-    
-    # Find and remove the user (replace with your database logic)
-    user_to_delete = next((u for u in users if u['id'] == user_id), None)
-    
-    if user_to_delete:
-        # Remove from your data store (replace with your actual data deletion logic)
-        users = [u for u in users if u['id'] != user_id]
-        return jsonify({'message': 'User deleted successfully'}), 200
-    else:
-        return jsonify({'error': 'User not found'}), 404
-
-@app.route('/admin/user/edit/<int:user_id>', methods=['POST'])
-def edit_user(user_id):
-    if 'username' not in session or session.get('role') != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-
-    data = request.get_json()
-    username = data.get('username')
-    email = data.get('email')
-    role = data.get('role')
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-    user = cur.fetchone()
-    if not user:
-        cur.close()
-        conn.close()
-        return jsonify({'error': 'User not found'}), 404
-
-    cur.execute(
-        "UPDATE users SET username = %s, email = %s, role = %s WHERE id = %s",
-        (username, email, role, user_id)
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({'message': 'User updated successfully'}), 200
-
-@app.route('/admin/user/get/<int:user_id>', methods=['GET'])
-def get_user(user_id):
-    if 'username' not in session or session.get('role') != 'admin':
-        return jsonify({'error': 'Unauthorized'}), 403
-    
-    # Find the user using the database
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    cur.execute("SELECT id, username, email, role, created_at FROM users WHERE id = %s", (user_id,))
-    user = cur.fetchone()
-    cur.close()
-    conn.close()
-    
-    if user:
-        return jsonify(dict(user)), 200
-    else:
-        return jsonify({'error': 'User not found'}), 404
     
     # Get quiz details
     cur.execute("SELECT * FROM quizzes WHERE id = %s", (quiz_id,))
     quiz = cur.fetchone()
+    
+    if quiz is None:
+        flash('Quiz not found.', 'error')
+        return redirect(url_for('student_dashboard' if session['role'] == 'student' else 'admin_dashboard'))
     
     # Get questions
     cur.execute("SELECT * FROM questions WHERE quiz_id = %s", (quiz_id,))
@@ -415,6 +317,176 @@ def get_user(user_id):
     conn.close()
     
     return render_template('view_quiz.html', quiz=quiz, questions=questions, attempts=attempts)
+
+@app.route('/admin/quiz/delete/<int:quiz_id>', methods=['DELETE'])
+def delete_quiz(quiz_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Check if quiz exists and belongs to this admin
+        cur.execute("SELECT id FROM quizzes WHERE id = %s AND created_by = %s", (quiz_id, session['user_id']))
+        if not cur.fetchone():
+            return jsonify({'error': 'Quiz not found or unauthorized'}), 404
+        
+        # Delete quiz (cascade will handle questions and attempts)
+        cur.execute("DELETE FROM quizzes WHERE id = %s", (quiz_id,))
+        conn.commit()
+        
+        return jsonify({'message': 'Quiz deleted successfully'}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/quiz/edit/<int:quiz_id>', methods=['POST'])
+def edit_quiz(quiz_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.get_json()
+    title = data.get('title')
+    description = data.get('description')
+    passing_score = data.get('passing_score')
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Check if quiz exists and belongs to this admin
+        cur.execute("SELECT id FROM quizzes WHERE id = %s AND created_by = %s", (quiz_id, session['user_id']))
+        if not cur.fetchone():
+            return jsonify({'error': 'Quiz not found or unauthorized'}), 404
+
+        cur.execute(
+            "UPDATE quizzes SET title = %s, description = %s, passing_score = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+            (title, description, passing_score, quiz_id)
+        )
+        conn.commit()
+        return jsonify({'message': 'Quiz updated successfully'}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/quiz/get/<int:quiz_id>', methods=['GET'])
+def get_quiz(quiz_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    
+    try:
+        cur.execute("SELECT * FROM quizzes WHERE id = %s AND created_by = %s", (quiz_id, session['user_id']))
+        quiz = cur.fetchone()
+        
+        if quiz:
+            return jsonify(dict(quiz)), 200
+        else:
+            return jsonify({'error': 'Quiz not found or unauthorized'}), 404
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/user/delete/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Prevent self-deletion
+    if user_id == session.get('user_id'):
+        return jsonify({'error': 'Cannot delete your own account'}), 400
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Check if user exists
+        cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        if not cur.fetchone():
+            return jsonify({'error': 'User not found'}), 404
+
+        # Delete user (cascade will handle related data)
+        cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()
+        
+        return jsonify({'message': 'User deleted successfully'}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/user/edit/<int:user_id>', methods=['POST'])
+def edit_user(user_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    data = request.get_json()
+    username = data.get('username')
+    email = data.get('email')
+    role = data.get('role')
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Check if user exists
+        cur.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+        if not cur.fetchone():
+            return jsonify({'error': 'User not found'}), 404
+
+        cur.execute(
+            "UPDATE users SET username = %s, email = %s, role = %s WHERE id = %s",
+            (username, email, role, user_id)
+        )
+        conn.commit()
+        return jsonify({'message': 'User updated successfully'}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/user/get/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    
+    try:
+        cur.execute("SELECT id, username, email, role, created_at FROM users WHERE id = %s", (user_id,))
+        user = cur.fetchone()
+        
+        if user:
+            return jsonify(dict(user)), 200
+        else:
+            return jsonify({'error': 'User not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
 
 @app.route('/student/dashboard')
 def student_dashboard():
@@ -438,10 +510,21 @@ def student_dashboard():
     """, (session['user_id'],))
     attempts = cur.fetchall()
     
+    # Get statistics
+    cur.execute("SELECT COUNT(*) FROM quiz_attempts WHERE user_id = %s", (session['user_id'],))
+    total_attempts = cur.fetchone()[0]
+    
+    cur.execute("SELECT COUNT(*) FROM quiz_attempts WHERE user_id = %s AND passed = true", (session['user_id'],))
+    passed_attempts = cur.fetchone()[0]
+    
     cur.close()
     conn.close()
     
-    return render_template('student_dashboard.html', quizzes=quizzes, attempts=attempts)
+    return render_template('student_dashboard.html', 
+                         quizzes=quizzes, 
+                         attempts=attempts,
+                         total_attempts=total_attempts,
+                         passed_attempts=passed_attempts)
 
 @app.route('/quiz/<int:quiz_id>/attempt', methods=['GET', 'POST'])
 def attempt_quiz(quiz_id):

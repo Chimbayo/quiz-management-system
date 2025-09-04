@@ -6,57 +6,135 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Quiz Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .input-focus:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.5);
+        }
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 class="text-2xl font-bold text-center mb-6">Quiz Management System</h1>
-        <h2 class="text-xl font-semibold text-center mb-6">Register</h2>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
+        <!-- Logo and Title -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg mb-6">
+                <i class="fas fa-user-plus text-4xl text-blue-600"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">Quiz Management System</h1>
+            <p class="text-blue-100">Create your account to get started</p>
+        </div>
         
-        <form method="POST" action="/register">
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
-                    Username
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
-                       id="username" name="username" type="text" placeholder="Username" required>
-            </div>
+        <!-- Register Form -->
+        <div class="bg-white rounded-2xl card-shadow p-8">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Create Account</h2>
             
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
-                    Email
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
-                       id="email" name="email" type="email" placeholder="Email" required>
-            </div>
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700 border border-red-200{% else %}bg-green-100 text-green-700 border border-green-200{% endif %}">
+                            <div class="flex items-center">
+                                <i class="fas {% if category == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} mr-2"></i>
+                                {{ message }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
             
-            <div class="mb-6">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
-                    Password
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline" 
-                       id="password" name="password" type="password" placeholder="Password" required>
-            </div>
-            
-            <div class="mb-6 hidden">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="role">
-                    Role
-                </label>
-                <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
-                        id="role" name="role">
-                    <option value="student" selected>Student</option>
-                </select>
-            </div>
-            
-            <div class="flex items-center justify-between">
-                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full" type="submit">
-                    Register
+            <form method="POST" action="/register" class="space-y-6">
+                <div>
+                    <label class="block text-gray-700 text-sm font-semibold mb-2" for="username">
+                        <i class="fas fa-user mr-2 text-blue-500"></i>Username
+                    </label>
+                    <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 input-focus" 
+                           id="username" name="username" type="text" placeholder="Choose a username" required>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 text-sm font-semibold mb-2" for="email">
+                        <i class="fas fa-envelope mr-2 text-blue-500"></i>Email
+                    </label>
+                    <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 input-focus" 
+                           id="email" name="email" type="email" placeholder="Enter your email" required>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 text-sm font-semibold mb-2" for="password">
+                        <i class="fas fa-lock mr-2 text-blue-500"></i>Password
+                    </label>
+                    <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 input-focus" 
+                           id="password" name="password" type="password" placeholder="Create a password" required>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Password should be at least 6 characters long
+                    </p>
+                </div>
+                
+                <div class="hidden">
+                    <label class="block text-gray-700 text-sm font-semibold mb-2" for="role">
+                        <i class="fas fa-user-tag mr-2 text-blue-500"></i>Role
+                    </label>
+                    <select class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 input-focus" 
+                            id="role" name="role">
+                        <option value="student" selected>Student</option>
+                    </select>
+                </div>
+                
+                <button class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 btn-hover focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2" type="submit">
+                    <i class="fas fa-user-plus mr-2"></i>Create Account
                 </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-gray-600">
+                    Already have an account? 
+                    <a href="/login" class="text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-200">
+                        Sign in here
+                    </a>
+                </p>
             </div>
-        </form>
+            
+            <!-- Features -->
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                <h3 class="text-sm font-semibold text-blue-700 mb-3 flex items-center">
+                    <i class="fas fa-star mr-2"></i>What you'll get
+                </h3>
+                <div class="space-y-2 text-sm text-blue-600">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Access to all available quizzes
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Track your learning progress
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        View detailed results and feedback
+                    </div>
+                </div>
+            </div>
+        </div>
         
-        <p class="text-center text-gray-500 text-xs mt-6">
-            Already have an account? <a href="/login" class="text-blue-500 hover:text-blue-700">Login here</a>
-        </p>
+        <!-- Footer -->
+        <div class="text-center mt-6">
+            <p class="text-blue-100 text-sm">
+                <i class="fas fa-heart mr-1"></i>
+                Join thousands of learners worldwide
+            </p>
+        </div>
     </div>
 </body>
 </html>

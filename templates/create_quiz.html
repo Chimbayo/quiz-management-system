@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Quiz - Quiz Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         let questionCount = 1;
         
@@ -14,38 +15,46 @@
             const questionsContainer = document.getElementById('questions-container');
             
             const questionDiv = document.createElement('div');
-            questionDiv.className = 'border p-4 rounded mb-4 question';
+            questionDiv.className = 'border border-gray-200 p-6 rounded-lg mb-6 question bg-white shadow-sm';
             questionDiv.innerHTML = `
-                <h4 class="font-semibold mb-2">Question ${questionCount}</h4>
-                <div class="mb-3">
-                    <label class="block text-gray-700 text-sm font-bold mb-1">Question Text</label>
-                    <input type="text" name="question_text" class="border rounded w-full py-1 px-2" required>
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="text-lg font-semibold text-gray-800">Question ${questionCount}</h4>
+                    <button type="button" class="text-red-500 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors duration-200" onclick="removeQuestion(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
                 
-                <div class="mb-3">
-                    <label class="block text-gray-700 text-sm font-bold mb-1">Question Type</label>
-                    <select name="question_type" class="border rounded w-full py-1 px-2" onchange="toggleOptions(this)">
-                        <option value="multiple_choice">Multiple Choice</option>
-                        <option value="true_false">True/False</option>
-                    </select>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Question Text *</label>
+                        <textarea name="question_text" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3" placeholder="Enter your question here..." required></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Question Type *</label>
+                        <select name="question_type" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="toggleOptions(this)" required>
+                            <option value="multiple_choice">Multiple Choice</option>
+                            <option value="true_false">True/False</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Points *</label>
+                        <input type="number" name="points" value="1" min="1" max="10" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                    </div>
                 </div>
                 
-                <div class="mb-3 options-field">
-                    <label class="block text-gray-700 text-sm font-bold mb-1">Options (separated by |)</label>
-                    <input type="text" name="options" class="border rounded w-full py-1 px-2" placeholder="Option1|Option2|Option3|Option4" required>
+                <div class="mb-4 options-field">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Options (separated by |) *</label>
+                    <input type="text" name="options" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Option1|Option2|Option3|Option4" required>
+                    <p class="text-sm text-gray-500 mt-1">Separate multiple options with the | character</p>
                 </div>
                 
-                <div class="mb-3">
-                    <label class="block text-gray-700 text-sm font-bold mb-1">Correct Answer</label>
-                    <input type="text" name="correct_answer" class="border rounded w-full py-1 px-2" required>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Correct Answer *</label>
+                    <input type="text" name="correct_answer" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter the correct answer" required>
+                    <p class="text-sm text-gray-500 mt-1">Must match one of the options exactly</p>
                 </div>
-                
-                <div class="mb-3">
-                    <label class="block text-gray-700 text-sm font-bold mb-1">Points</label>
-                    <input type="number" name="points" value="1" min="1" class="border rounded w-full py-1 px-2" required>
-                </div>
-                
-                <button type="button" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-sm" onclick="removeQuestion(this)">Remove Question</button>
             `;
             
             questionsContainer.appendChild(questionDiv);
@@ -65,98 +74,172 @@
         
         function toggleOptions(select) {
             const optionsField = select.closest('.question').querySelector('.options-field');
+            const optionsInput = optionsField.querySelector('input');
+            
             if (select.value === 'true_false') {
-                optionsField.querySelector('input').value = 'True|False';
-                optionsField.querySelector('input').disabled = true;
+                optionsInput.value = 'True|False';
+                optionsInput.disabled = true;
+                optionsInput.classList.add('bg-gray-100');
             } else {
-                optionsField.querySelector('input').value = '';
-                optionsField.querySelector('input').disabled = false;
+                optionsInput.value = '';
+                optionsInput.disabled = false;
+                optionsInput.classList.remove('bg-gray-100');
             }
+        }
+        
+        function validateForm() {
+            const questions = document.querySelectorAll('.question');
+            let isValid = true;
+            
+            questions.forEach((question, index) => {
+                const questionText = question.querySelector('[name="question_text"]').value.trim();
+                const options = question.querySelector('[name="options"]').value.trim();
+                const correctAnswer = question.querySelector('[name="correct_answer"]').value.trim();
+                
+                if (!questionText || !options || !correctAnswer) {
+                    isValid = false;
+                    question.classList.add('border-red-300', 'bg-red-50');
+                } else {
+                    question.classList.remove('border-red-300', 'bg-red-50');
+                }
+            });
+            
+            if (!isValid) {
+                alert('Please fill in all required fields for each question.');
+            }
+            
+            return isValid;
         }
     </script>
 </head>
 <body class="bg-gray-100 min-h-screen">
-    <nav class="bg-blue-600 text-white p-4">
+    <nav class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold">Quiz Management System - Create Quiz</h1>
+            <h1 class="text-xl font-bold flex items-center">
+                <i class="fas fa-graduation-cap mr-3"></i>
+                Quiz Management System - Create Quiz
+            </h1>
             <div class="flex items-center space-x-4">
-                <span>Welcome, {{ session.username }}</span>
-                <a href="/admin/dashboard" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Back to Dashboard</a>
-                <a href="/logout" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Logout</a>
+                <span class="flex items-center">
+                    <i class="fas fa-user-circle mr-2"></i>
+                    Welcome, {{ session.username }}
+                </span>
+                <a href="/admin/dashboard" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded-lg transition-colors duration-200">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+                <a href="/logout" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors duration-200">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </a>
             </div>
         </div>
     </nav>
     
     <div class="container mx-auto p-4">
-        <h2 class="text-2xl font-bold mb-6">Create New Quiz</h2>
-        
-        <form method="POST" class="bg-white p-6 rounded-lg shadow-md">
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="title">
-                    Quiz Title
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
-                       id="title" name="title" type="text" placeholder="Quiz Title" required>
-            </div>
-            
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="description">
-                    Description
-                </label>
-                <textarea class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
-                          id="description" name="description" placeholder="Quiz Description" rows="3"></textarea>
-            </div>
-            
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="passing_score">
-                    Passing Score (%)
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" 
-                       id="passing_score" name="passing_score" type="number" min="1" max="100" value="60" required>
-            </div>
-            
-            <h3 class="text-xl font-semibold mb-4">Questions</h3>
-            <div id="questions-container">
-                <div class="border p-4 rounded mb-4 question">
-                    <h4 class="font-semibold mb-2">Question 1</h4>
-                    <div class="mb-3">
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Question Text</label>
-                        <input type="text" name="question_text" class="border rounded w-full py-1 px-2" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Question Type</label>
-                        <select name="question_type" class="border rounded w-full py-1 px-2" onchange="toggleOptions(this)">
-                            <option value="multiple_choice">Multiple Choice</option>
-                            <option value="true_false">True/False</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3 options-field">
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Options (separated by |)</label>
-                        <input type="text" name="options" class="border rounded w-full py-1 px-2" placeholder="Option1|Option2|Option3|Option4" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Correct Answer</label>
-                        <input type="text" name="correct_answer" class="border rounded w-full py-1 px-2" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="block text-gray-700 text-sm font-bold mb-1">Points</label>
-                        <input type="number" name="points" value="1" min="1" class="border rounded w-full py-1 px-2" required>
-                    </div>
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white p-8 rounded-lg shadow-md">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Create New Quiz</h2>
+                    <p class="text-gray-600">Design an engaging quiz for your students</p>
                 </div>
+                
+                <form method="POST" onsubmit="return validateForm()" class="space-y-8">
+                    <!-- Quiz Basic Information -->
+                    <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <i class="fas fa-info-circle mr-2 text-blue-500"></i>Quiz Information
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="title">
+                                    Quiz Title *
+                                </label>
+                                <input class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                       id="title" name="title" type="text" placeholder="Enter quiz title" required>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-gray-700 text-sm font-bold mb-2" for="passing_score">
+                                    Passing Score (%) *
+                                </label>
+                                <input class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                       id="passing_score" name="passing_score" type="number" min="1" max="100" value="60" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="description">
+                                Description
+                            </label>
+                            <textarea class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                      id="description" name="description" placeholder="Describe what this quiz covers..." rows="3"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Questions Section -->
+                    <div>
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-800 flex items-center">
+                                <i class="fas fa-question-circle mr-2 text-green-500"></i>Quiz Questions
+                            </h3>
+                            <button type="button" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200" onclick="addQuestion()">
+                                <i class="fas fa-plus mr-2"></i>Add Question
+                            </button>
+                        </div>
+                        
+                        <div id="questions-container">
+                            <div class="border border-gray-200 p-6 rounded-lg question bg-white shadow-sm">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h4 class="text-lg font-semibold text-gray-800">Question 1</h4>
+                                    <button type="button" class="text-red-500 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors duration-200" onclick="removeQuestion(this)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-gray-700 text-sm font-bold mb-2">Question Text *</label>
+                                        <textarea name="question_text" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3" placeholder="Enter your question here..." required></textarea>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-gray-700 text-sm font-bold mb-2">Question Type *</label>
+                                        <select name="question_type" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="toggleOptions(this)" required>
+                                            <option value="multiple_choice">Multiple Choice</option>
+                                            <option value="true_false">True/False</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-gray-700 text-sm font-bold mb-2">Points *</label>
+                                        <input type="number" name="points" value="1" min="1" max="10" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4 options-field">
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Options (separated by |) *</label>
+                                    <input type="text" name="options" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Option1|Option2|Option3|Option4" required>
+                                    <p class="text-sm text-gray-500 mt-1">Separate multiple options with the | character</p>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Correct Answer *</label>
+                                    <input type="text" name="correct_answer" class="border border-gray-300 rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter the correct answer" required>
+                                    <p class="text-sm text-gray-500 mt-1">Must match one of the options exactly</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="flex justify-center pt-6">
+                        <button class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors duration-200" type="submit">
+                            <i class="fas fa-save mr-2"></i>Create Quiz
+                        </button>
+                    </div>
+                </form>
             </div>
-            
-            <button type="button" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded mb-6" onclick="addQuestion()">Add Another Question</button>
-            
-            <div class="flex items-center justify-between">
-                <button class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
-                    Create Quiz
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 </body>
 </html>

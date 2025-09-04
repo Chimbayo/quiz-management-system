@@ -8,101 +8,191 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
-    <nav class="bg-blue-600 text-white p-4">
+    <nav class="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold">Quiz Management System - Admin Panel</h1>
+            <h1 class="text-xl font-bold flex items-center">
+                <i class="fas fa-graduation-cap mr-3"></i>
+                Quiz Management System - Admin Panel
+            </h1>
             <div class="flex items-center space-x-4">
-                <span>Welcome, {{ session.username }}</span>
-                <a href="/logout" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Logout</a>
+                <span class="flex items-center">
+                    <i class="fas fa-user-circle mr-2"></i>
+                    Welcome, {{ session.username }}
+                </span>
+                <a href="/logout" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors duration-200">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </a>
             </div>
         </div>
     </nav>
     
     <div class="container mx-auto p-4">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                        <i class="fas fa-question-circle text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Total Quizzes</p>
+                        <p class="text-2xl font-semibold text-gray-900">{{ total_quizzes }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-600">
+                        <i class="fas fa-users text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Total Students</p>
+                        <p class="text-2xl font-semibold text-gray-900">{{ total_students }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                        <i class="fas fa-chart-line text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Total Attempts</p>
+                        <p class="text-2xl font-semibold text-gray-900">{{ total_attempts }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold">Dashboard</h2>
-            <a href="/admin/quiz/new" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Create New Quiz</a>
+            <h2 class="text-3xl font-bold text-gray-800">Dashboard Overview</h2>
+            <a href="/admin/quiz/new" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors duration-200">
+                <i class="fas fa-plus mr-2"></i>Create New Quiz
+            </a>
         </div>
         
         <!-- Success/Error Messages -->
-        <div id="messageContainer" class="mb-4"></div>
+        <div id="messageContainer" class="mb-6"></div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <!-- Quizzes Section -->
             <div class="bg-white p-6 rounded-lg shadow-md">
-                <h3 class="text-xl font-semibold mb-4">Your Quizzes</h3>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-question-circle mr-2 text-blue-500"></i>Your Quizzes
+                    </h3>
+                    <span class="text-sm text-gray-500">{{ quizzes|length }} quiz{{ 'es' if quizzes|length != 1 else '' }}</span>
+                </div>
                 
                 {% if quizzes %}
                 <div class="space-y-4">
                     {% for quiz in quizzes %}
-                    <div class="border p-4 rounded relative">
-                        <h4 class="font-semibold">{{ quiz.title }}</h4>
-                        <p class="text-sm text-gray-600">{{ quiz.description }}</p>
-                        <p class="text-sm">Passing Score: {{ quiz.passing_score }}%</p>
-                        <div class="mt-2 flex space-x-2">
-                            <a href="/admin/quiz/{{ quiz.id }}" class="text-blue-500 hover:text-blue-700 text-sm">View Details & Results</a>
-                            <button onclick="editQuiz('{{ quiz.id }}')" class="text-yellow-500 hover:text-yellow-700 text-sm">
-                                <i class="fas fa-edit"></i> Edit
+                    <div class="border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow duration-200">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-lg text-gray-800 mb-1">{{ quiz.title }}</h4>
+                                <p class="text-sm text-gray-600 mb-2">{{ quiz.description }}</p>
+                                <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                    <span><i class="fas fa-target mr-1"></i>Pass: {{ quiz.passing_score }}%</span>
+                                    <span><i class="fas fa-calendar mr-1"></i>{{ quiz.created_at.strftime('%b %d, %Y') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3 pt-3 border-t border-gray-100">
+                            <a href="/quiz/{{ quiz.id }}" class="text-blue-500 hover:text-blue-700 text-sm font-medium">
+                                <i class="fas fa-eye mr-1"></i>View Details
+                            </a>
+                            <button onclick="editQuiz('{{ quiz.id }}')" class="text-yellow-500 hover:text-yellow-700 text-sm font-medium">
+                                <i class="fas fa-edit mr-1"></i>Edit
                             </button>
-                            <button onclick="confirmDeleteQuiz('{{ quiz.id }}', '{{ quiz.title }}')" class="text-red-500 hover:text-red-700 text-sm">
-                                <i class="fas fa-trash"></i> Delete
+                            <button onclick="confirmDeleteQuiz('{{ quiz.id }}', '{{ quiz.title }}')" class="text-red-500 hover:text-red-700 text-sm font-medium">
+                                <i class="fas fa-trash mr-1"></i>Delete
                             </button>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-gray-500">You haven't created any quizzes yet.</p>
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-question-circle text-6xl mb-4 text-gray-300"></i>
+                    <p class="text-lg mb-2">No quizzes created yet</p>
+                    <p class="text-sm">Start by creating your first quiz!</p>
+                </div>
                 {% endif %}
             </div>
             
             <!-- Users Section -->
             <div class="bg-white p-6 rounded-lg shadow-md">
-                <h3 class="text-xl font-semibold mb-4">Registered Users</h3>
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-users mr-2 text-green-500"></i>Registered Users
+                    </h3>
+                    <span class="text-sm text-gray-500">{{ users|length }} user{{ 's' if users|length != 1 else '' }}</span>
+                </div>
                 
                 {% if users %}
                 <div class="space-y-3">
                     {% for user in users %}
-                    <div class="border p-3 rounded flex justify-between items-center">
-                        <div>
-                            <h4 class="font-semibold">{{ user.username }}</h4>
-                            <p class="text-sm text-gray-600">{{ user.email }} ({{ user.role }})</p>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-xs text-gray-500">{{ user.created_at.strftime('%Y-%m-%d') }}</span>
-                            <button onclick="editUser('{{ user.id }}')" class="text-yellow-500 hover:text-yellow-700">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="confirmDeleteUser('{{ user.id }}', '{{ user.username }}')" class="text-red-500 hover:text-red-700">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                    <div class="border border-gray-200 p-4 rounded-lg hover:shadow-md transition-shadow duration-200">
+                        <div class="flex justify-between items-center">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3">
+                                    <h4 class="font-semibold text-gray-800">{{ user.username }}</h4>
+                                    <span class="px-2 py-1 text-xs rounded-full {% if user.role == 'admin' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                                        {{ user.role|title }}
+                                    </span>
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1">{{ user.email }}</p>
+                                <p class="text-xs text-gray-500 mt-1">Joined: {{ user.created_at.strftime('%b %d, %Y') }}</p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="editUser('{{ user.id }}')" class="text-yellow-500 hover:text-yellow-700 p-2 rounded hover:bg-yellow-50">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% if user.id != session.user_id %}
+                                <button onclick="confirmDeleteUser('{{ user.id }}', '{{ user.username }}')" class="text-red-500 hover:text-red-700 p-2 rounded hover:bg-red-50">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-gray-500">No users registered yet.</p>
+                <div class="text-center py-12 text-gray-500">
+                    <i class="fas fa-users text-6xl mb-4 text-gray-300"></i>
+                    <p class="text-lg mb-2">No users registered yet</p>
+                    <p class="text-sm">Users will appear here once they register</p>
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4" id="modalTitle">Confirm Delete</h3>
-            <p class="mb-4" id="modalMessage">Are you sure you want to delete this item?</p>
+    <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex items-center mb-4">
+                <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4">
+                    <i class="fas fa-exclamation-triangle text-xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800" id="modalTitle">Confirm Delete</h3>
+            </div>
+            <p class="mb-6 text-gray-600" id="modalMessage">Are you sure you want to delete this item?</p>
             <div class="flex justify-end space-x-3">
-                <button id="cancelDelete" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded">Cancel</button>
-                <button id="confirmDelete" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded">Delete</button>
+                <button id="cancelDelete" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg transition-colors duration-200">Cancel</button>
+                <button id="confirmDelete" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors duration-200">Delete</button>
             </div>
         </div>
     </div>
 
     <!-- Quiz Edit Modal -->
-    <div id="quizEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4">Edit Quiz</h3>
+    <div id="quizEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Edit Quiz</h3>
             <form id="quizEditForm">
                 <input type="hidden" id="editQuizId">
                 <div class="mb-4">
@@ -118,17 +208,17 @@
                     <input type="number" id="editQuizPassingScore" min="1" max="100" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
                 </div>
                 <div class="flex justify-end space-x-3">
-                    <button type="button" id="cancelQuizEdit" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">Save Changes</button>
+                    <button type="button" id="cancelQuizEdit" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg transition-colors duration-200">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200">Save Changes</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- User Edit Modal -->
-    <div id="userEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
-        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-            <h3 class="text-xl font-semibold mb-4">Edit User</h3>
+    <div id="userEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-4">
+            <h3 class="text-xl font-semibold mb-4 text-gray-800">Edit User</h3>
             <form id="userEditForm">
                 <input type="hidden" id="editUserId">
                 <div class="mb-4">
@@ -142,13 +232,13 @@
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2" for="editRole">Role</label>
                     <select id="editRole" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <option value="user">User</option>
+                        <option value="student">Student</option>
                         <option value="admin">Admin</option>
                     </select>
                 </div>
                 <div class="flex justify-end space-x-3">
-                    <button type="button" id="cancelUserEdit" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded">Cancel</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded">Save Changes</button>
+                    <button type="button" id="cancelUserEdit" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded-lg transition-colors duration-200">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200">Save Changes</button>
                 </div>
             </form>
         </div>
@@ -178,8 +268,11 @@
         function showMessage(message, type = 'success') {
             const messageContainer = document.getElementById('messageContainer');
             messageContainer.innerHTML = `
-                <div class="p-4 rounded ${type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-                    ${message}
+                <div class="p-4 rounded-lg ${type === 'success' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}">
+                    <div class="flex items-center">
+                        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+                        ${message}
+                    </div>
                 </div>
             `;
             
@@ -190,35 +283,51 @@
         }
         
         // Quiz functions
-        function editQuiz(quizId) {
-            // In a real application, you would fetch the quiz data from the server
-            // For this example, we'll simulate with dummy data
-            document.getElementById('editQuizId').value = quizId;
-            document.getElementById('editQuizTitle').value = `Quiz ${quizId} Title`;
-            document.getElementById('editQuizDescription').value = `Description for quiz ${quizId}`;
-            document.getElementById('editQuizPassingScore').value = Math.floor(Math.random() * 30) + 70;
-            
-            quizEditModal.classList.remove('hidden');
+        async function editQuiz(quizId) {
+            try {
+                const response = await fetch(`/admin/quiz/get/${quizId}`);
+                if (response.ok) {
+                    const quiz = await response.json();
+                    document.getElementById('editQuizId').value = quiz.id;
+                    document.getElementById('editQuizTitle').value = quiz.title;
+                    document.getElementById('editQuizDescription').value = quiz.description;
+                    document.getElementById('editQuizPassingScore').value = quiz.passing_score;
+                    quizEditModal.classList.remove('hidden');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error fetching quiz data', 'error');
+            }
         }
         
         function confirmDeleteQuiz(quizId, quizTitle) {
             itemToDelete = quizId;
             deleteType = 'quiz';
             modalTitle.textContent = 'Delete Quiz';
-            modalMessage.textContent = `Are you sure you want to delete the quiz "${quizTitle}"? This action cannot be undone.`;
+            modalMessage.textContent = `Are you sure you want to delete the quiz "${quizTitle}"? This action cannot be undone and will remove all related questions and attempts.`;
             deleteModal.classList.remove('hidden');
         }
         
         // User functions
-        function editUser(userId) {
-            // In a real application, you would fetch the user data from the server
-            // For this example, we'll simulate with dummy data
-            document.getElementById('editUserId').value = userId;
-            document.getElementById('editUsername').value = `user${userId}`;
-            document.getElementById('editEmail').value = `user${userId}@example.com`;
-            document.getElementById('editRole').value = userId % 3 === 0 ? 'admin' : 'user';
-            
-            userEditModal.classList.remove('hidden');
+        async function editUser(userId) {
+            try {
+                const response = await fetch(`/admin/user/get/${userId}`);
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('editUserId').value = user.id;
+                    document.getElementById('editUsername').value = user.username;
+                    document.getElementById('editEmail').value = user.email;
+                    document.getElementById('editRole').value = user.role;
+                    userEditModal.classList.remove('hidden');
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error fetching user data', 'error');
+            }
         }
         
         function confirmDeleteUser(userId, username) {
@@ -236,14 +345,26 @@
             deleteType = null;
         });
         
-        confirmDeleteBtn.addEventListener('click', () => {
-            // In a real application, you would make an API call to delete the item
-            if (deleteType === 'quiz') {
-                // API call to delete quiz would go here
-                showMessage(`Quiz ${itemToDelete} has been deleted successfully.`);
-            } else if (deleteType === 'user') {
-                // API call to delete user would go here
-                showMessage(`User ${itemToDelete} has been deleted successfully.`);
+        confirmDeleteBtn.addEventListener('click', async () => {
+            try {
+                let response;
+                if (deleteType === 'quiz') {
+                    response = await fetch(`/admin/quiz/delete/${itemToDelete}`, { method: 'DELETE' });
+                } else if (deleteType === 'user') {
+                    response = await fetch(`/admin/user/delete/${itemToDelete}`, { method: 'DELETE' });
+                }
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage(result.message, 'success');
+                    // Reload page to reflect changes
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error deleting item', 'error');
             }
             
             deleteModal.classList.add('hidden');
@@ -255,32 +376,80 @@
             quizEditModal.classList.add('hidden');
         });
         
-        quizEditForm.addEventListener('submit', (e) => {
+        quizEditForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // In a real application, you would make an API call to update the quiz
             const quizId = document.getElementById('editQuizId').value;
             const title = document.getElementById('editQuizTitle').value;
+            const description = document.getElementById('editQuizDescription').value;
+            const passingScore = document.getElementById('editQuizPassingScore').value;
             
-            // API call to update quiz would go here
-            showMessage(`Quiz "${title}" has been updated successfully.`);
-            quizEditModal.classList.add('hidden');
+            try {
+                const response = await fetch(`/admin/quiz/edit/${quizId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        description: description,
+                        passing_score: parseInt(passingScore)
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage(result.message, 'success');
+                    quizEditModal.classList.add('hidden');
+                    // Reload page to reflect changes
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error updating quiz', 'error');
+            }
         });
         
         cancelUserEditBtn.addEventListener('click', () => {
             userEditModal.classList.add('hidden');
         });
         
-        userEditForm.addEventListener('submit', (e) => {
+        userEditForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // In a real application, you would make an API call to update the user
             const userId = document.getElementById('editUserId').value;
             const username = document.getElementById('editUsername').value;
+            const email = document.getElementById('editEmail').value;
+            const role = document.getElementById('editRole').value;
             
-            // API call to update user would go here
-            showMessage(`User "${username}" has been updated successfully.`);
-            userEditModal.classList.add('hidden');
+            try {
+                const response = await fetch(`/admin/user/edit/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        role: role
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage(result.message, 'success');
+                    userEditModal.classList.add('hidden');
+                    // Reload page to reflect changes
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Error updating user', 'error');
+            }
         });
         
         // Close modals when clicking outside

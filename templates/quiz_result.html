@@ -6,43 +6,182 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiz Result - Quiz Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        // Animate score counter
+        function animateScore() {
+            const scoreElement = document.getElementById('score-display');
+            const targetScore = {{ score|round(1) }};
+            let currentScore = 0;
+            const increment = targetScore / 50;
+            
+            const timer = setInterval(() => {
+                currentScore += increment;
+                if (currentScore >= targetScore) {
+                    currentScore = targetScore;
+                    clearInterval(timer);
+                }
+                scoreElement.textContent = currentScore.toFixed(1) + '%';
+            }, 50);
+        }
+        
+        // Run animation when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            animateScore();
+        });
+    </script>
 </head>
 <body class="bg-gray-100 min-h-screen">
-    <nav class="bg-blue-600 text-white p-4">
+    <nav class="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold">Quiz Management System</h1>
+            <h1 class="text-xl font-bold flex items-center">
+                <i class="fas fa-graduation-cap mr-3"></i>
+                Quiz Management System
+            </h1>
             <div class="flex items-center space-x-4">
-                <span>Welcome, {{ session.username }}</span>
-                <a href="/student/dashboard" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Back to Dashboard</a>
-                <a href="/logout" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Logout</a>
+                <span class="flex items-center">
+                    <i class="fas fa-user-circle mr-2"></i>
+                    Welcome, {{ session.username }}
+                </span>
+                <a href="/student/dashboard" class="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-lg transition-colors duration-200">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
+                <a href="/logout" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition-colors duration-200">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </a>
             </div>
         </div>
     </nav>
     
     <div class="container mx-auto p-4">
-        <div class="bg-white p-6 rounded-lg shadow-md text-center">
-            <h2 class="text-2xl font-bold mb-4">Quiz Results</h2>
-            
-            <div class="mb-6">
-                <p class="text-lg">Your score: <span class="font-bold">{{ score|round(1) }}%</span></p>
-                <p class="text-lg">Passing score: {{ passing_score }}%</p>
+        <div class="max-w-2xl mx-auto">
+            <div class="bg-white p-8 rounded-lg shadow-md text-center">
+                <!-- Result Header -->
+                <div class="mb-8">
+                    {% if passed %}
+                    <div class="text-6xl mb-4">🎉</div>
+                    <h2 class="text-3xl font-bold text-green-600 mb-2">Congratulations!</h2>
+                    <p class="text-xl text-gray-600">You've successfully completed the quiz!</p>
+                    {% else %}
+                    <div class="text-6xl mb-4">💪</div>
+                    <h2 class="text-3xl font-bold text-blue-600 mb-2">Quiz Completed!</h2>
+                    <p class="text-xl text-gray-600">Great effort! Keep learning and improving.</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Score Display -->
+                <div class="mb-8">
+                    <div class="relative inline-block">
+                        <div class="w-48 h-48 rounded-full border-8 {% if passed %}border-green-200 bg-green-50{% else %}border-blue-200 bg-blue-50{% endif %} flex items-center justify-center">
+                            <div class="text-center">
+                                <div class="text-4xl font-bold {% if passed %}text-green-600{% else %}text-blue-600{% endif %}" id="score-display">0%</div>
+                                <div class="text-sm text-gray-500">Your Score</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress Ring -->
+                        <svg class="absolute inset-0 w-48 h-48 transform -rotate-90" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+                            <circle cx="50" cy="50" r="45" fill="none" 
+                                    stroke="{% if passed %}#10b981{% else %}#3b82f6{% endif %}" 
+                                    stroke-width="8" 
+                                    stroke-dasharray="283"
+                                    stroke-dashoffset="{{ 283 - (283 * score / 100) }}"
+                                    stroke-linecap="round"
+                                    class="transition-all duration-1000 ease-out"/>
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- Score Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="text-2xl font-bold text-gray-800">{{ score|round(1) }}%</div>
+                        <div class="text-sm text-gray-600">Your Score</div>
+                    </div>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="text-2xl font-bold text-gray-800">{{ passing_score }}%</div>
+                        <div class="text-sm text-gray-600">Passing Score</div>
+                    </div>
+                </div>
+                
+                <!-- Result Message -->
+                <div class="mb-8">
+                    {% if passed %}
+                    <div class="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-lg">
+                        <div class="flex items-center justify-center">
+                            <i class="fas fa-check-circle text-2xl mr-3"></i>
+                            <div>
+                                <p class="font-bold text-lg">Excellent Work!</p>
+                                <p>You've demonstrated a solid understanding of the material.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="bg-blue-100 border border-blue-400 text-blue-700 px-6 py-4 rounded-lg">
+                        <div class="flex items-center justify-center">
+                            <i class="fas fa-info-circle text-2xl mr-3"></i>
+                            <div>
+                                <p class="font-bold text-lg">Keep Learning!</p>
+                                <p>Review the material and try again. Every attempt is a learning opportunity.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Performance Insights -->
+                <div class="mb-8 text-left">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4 text-center">Performance Insights</h3>
+                    <div class="space-y-3">
+                        {% if passed %}
+                        <div class="flex items-center p-3 bg-green-50 rounded-lg">
+                            <i class="fas fa-star text-green-500 mr-3"></i>
+                            <span class="text-green-700">You scored above the passing threshold</span>
+                        </div>
+                        <div class="flex items-center p-3 bg-blue-50 rounded-lg">
+                            <i class="fas fa-chart-line text-blue-500 mr-3"></i>
+                            <span class="text-blue-700">Your performance shows good understanding</span>
+                        </div>
+                        {% else %}
+                        <div class="flex items-center p-3 bg-yellow-50 rounded-lg">
+                            <i class="fas fa-lightbulb text-yellow-500 mr-3"></i>
+                            <span class="text-yellow-700">You're close to passing - keep studying!</span>
+                        </div>
+                        <div class="flex items-center p-3 bg-blue-50 rounded-lg">
+                            <i class="fas fa-book text-blue-500 mr-3"></i>
+                            <span class="text-blue-700">Review the material and try again</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="flex items-center p-3 bg-purple-50 rounded-lg">
+                            <i class="fas fa-target text-purple-500 mr-3"></i>
+                            <span class="text-purple-700">You need {{ passing_score - score|round(1) }}% more to pass</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="/student/dashboard" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200">
+                        <i class="fas fa-home mr-2"></i>Return to Dashboard
+                    </a>
+                    {% if not passed %}
+                    <a href="javascript:history.back()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200">
+                        <i class="fas fa-redo mr-2"></i>Try Again
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <!-- Motivational Message -->
+                <div class="mt-8 pt-6 border-t border-gray-200">
+                    {% if passed %}
+                    <p class="text-gray-600 italic">"Success is not final, failure is not fatal: it is the courage to continue that counts." - Winston Churchill</p>
+                    {% else %}
+                    <p class="text-gray-600 italic">"The only real mistake is the one from which we learn nothing." - Henry Ford</p>
+                    {% endif %}
+                </div>
             </div>
-            
-            {% if passed %}
-            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-                <p class="font-bold">Congratulations!</p>
-                <p>You passed the quiz.</p>
-            </div>
-            {% else %}
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                <p class="font-bold">Sorry, you didn't pass this time.</p>
-                <p>Please try again.</p>
-            </div>
-            {% endif %}
-            
-            <a href="/student/dashboard" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
-                Return to Dashboard
-            </a>
         </div>
     </div>
 </body>

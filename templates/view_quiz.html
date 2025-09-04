@@ -1,82 +1,142 @@
-<!-- templates/view_quiz.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Quiz - Quiz Management System</title>
+    <title>{{ quiz.title }} - Quiz Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
     <nav class="bg-blue-600 text-white p-4">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold">Quiz Management System - Quiz Details</h1>
+            <h1 class="text-xl font-bold">Quiz Management System</h1>
             <div class="flex items-center space-x-4">
                 <span>Welcome, {{ session.username }}</span>
+                {% if session.role == 'admin' %}
                 <a href="/admin/dashboard" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Back to Dashboard</a>
+                {% else %}
+                <a href="/student/dashboard" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Back to Dashboard</a>
+                {% endif %}
                 <a href="/logout" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded">Logout</a>
             </div>
         </div>
     </nav>
     
     <div class="container mx-auto p-4">
+        <!-- Quiz Header -->
         <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-            <h2 class="text-2xl font-bold mb-2">{{ quiz.title }}</h2>
-            <p class="text-gray-600 mb-4">{{ quiz.description }}</p>
-            <p class="text-sm">Passing Score: {{ quiz.passing_score }}%</p>
-            <p class="text-sm">Created: {{ quiz.created_at.strftime('%Y-%m-%d') }}</p>
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">{{ quiz.title }}</h2>
+                    <p class="text-gray-600 text-lg mb-4">{{ quiz.description }}</p>
+                    <div class="flex items-center space-x-6 text-sm text-gray-500">
+                        <span><i class="fas fa-calendar mr-2"></i>Created: {{ quiz.created_at.strftime('%B %d, %Y') }}</span>
+                        <span><i class="fas fa-target mr-2"></i>Passing Score: {{ quiz.passing_score }}%</span>
+                        <span><i class="fas fa-question-circle mr-2"></i>{{ questions|length }} Questions</span>
+                    </div>
+                </div>
+                {% if session.role == 'student' %}
+                <a href="/quiz/{{ quiz.id }}/attempt" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold text-lg">
+                    <i class="fas fa-play mr-2"></i>Take Quiz
+                </a>
+                {% endif %}
+            </div>
         </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Questions -->
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Questions Section -->
             <div class="bg-white p-6 rounded-lg shadow-md">
-                <h3 class="text-xl font-semibold mb-4">Questions</h3>
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-list-ul mr-2 text-blue-500"></i>Quiz Questions
+                </h3>
                 
                 {% if questions %}
                 <div class="space-y-4">
                     {% for question in questions %}
-                    <div class="border p-4 rounded">
-                        <h4 class="font-semibold mb-2">{{ loop.index }}. {{ question.question_text }}</h4>
-                        <p class="text-sm text-gray-500 mb-2">Type: {{ question.question_type }} | Points: {{ question.points }}</p>
-                        
-                        <div class="mb-2">
-                            <span class="font-semibold">Options:</span>
-                            <ul class="list-disc list-inside ml-4">
-                                {% for option in question.options %}
-                                <li>{{ option }}</li>
-                                {% endfor %}
-                            </ul>
+                    <div class="border-l-4 border-blue-500 pl-4 py-3 bg-gray-50 rounded-r">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold text-gray-800">Question {{ loop.index }}</h4>
+                            <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">{{ question.points }} point{% if question.points > 1 %}s{% endif %}</span>
                         </div>
+                        <p class="text-gray-700 mb-3">{{ question.question_text }}</p>
                         
-                        <p class="text-sm"><span class="font-semibold">Correct Answer:</span> {{ question.correct_answer }}</p>
+                        {% if question.question_type == 'true_false' %}
+                        <div class="text-sm text-gray-600">
+                            <span class="font-medium">Type:</span> True/False
+                        </div>
+                        {% else %}
+                        <div class="text-sm text-gray-600">
+                            <span class="font-medium">Type:</span> Multiple Choice
+                        </div>
+                        {% if question.options %}
+                        <div class="mt-2">
+                            <span class="font-medium text-gray-600">Options:</span>
+                            <div class="mt-1 space-y-1">
+                                {% for option in question.options %}
+                                <div class="text-sm text-gray-600 ml-4">• {{ option }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-gray-500">No questions found for this quiz.</p>
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-question-circle text-4xl mb-4 text-gray-300"></i>
+                    <p>No questions available for this quiz.</p>
+                </div>
                 {% endif %}
             </div>
-            
-            <!-- Attempts -->
+
+            <!-- Attempts Section -->
             <div class="bg-white p-6 rounded-lg shadow-md">
-                <h3 class="text-xl font-semibold mb-4">Quiz Attempts</h3>
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">
+                    <i class="fas fa-chart-line mr-2 text-green-500"></i>Quiz Attempts
+                </h3>
                 
                 {% if attempts %}
                 <div class="space-y-3">
                     {% for attempt in attempts %}
-                    <div class="border p-3 rounded">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-semibold">{{ attempt.username }}</h4>
-                            <span class="text-sm {% if attempt.passed %}text-green-600{% else %}text-red-600{% endif %}">
-                                {{ attempt.score|round(1) }}% {% if attempt.passed %}(Passed){% else %}(Failed){% endif %}
+                    <div class="border p-4 rounded-lg {% if attempt.passed %}border-green-200 bg-green-50{% else %}border-red-200 bg-red-50{% endif %}">
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-semibold text-gray-800">{{ attempt.username }}</h4>
+                            <span class="text-sm font-bold {% if attempt.passed %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ attempt.score|round(1) }}%
                             </span>
                         </div>
-                        <p class="text-xs text-gray-500">Attempted on: {{ attempt.attempted_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        <div class="flex justify-between items-center text-sm text-gray-600">
+                            <span>{% if attempt.passed %}✅ Passed{% else %}❌ Failed{% endif %}</span>
+                            <span>{{ attempt.attempted_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                        </div>
                     </div>
                     {% endfor %}
                 </div>
+                
+                <!-- Statistics -->
+                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                    <h4 class="font-semibold text-gray-800 mb-3">Attempt Statistics</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">{{ attempts|length }}</div>
+                            <div class="text-gray-600">Total Attempts</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">
+                                {{ attempts|selectattr('passed', 'equalto', true)|list|length }}
+                            </div>
+                            <div class="text-gray-600">Passed</div>
+                        </div>
+                    </div>
+                </div>
                 {% else %}
-                <p class="text-gray-500">No attempts have been made on this quiz yet.</p>
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-chart-line text-4xl mb-4 text-gray-300"></i>
+                    <p>No attempts have been made yet.</p>
+                    <p class="text-sm mt-2">Be the first to take this quiz!</p>
+                </div>
                 {% endif %}
             </div>
         </div>
