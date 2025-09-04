@@ -150,7 +150,8 @@ def register():
         username = request.form['username']
         email = request.form['email']
         password = request.form['password']
-        role = request.form.get('role', 'student')
+        # Enforce student role on self-registration
+        role = 'student'
         
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
         

@@ -11,7 +11,7 @@
         // Animate score counter
         function animateScore() {
             const scoreElement = document.getElementById('score-display');
-            const targetScore = {{ score|round(1) }};
+            const targetScore = Number('{{ score|round(1) }}');
             let currentScore = 0;
             const increment = targetScore / 50;
             
