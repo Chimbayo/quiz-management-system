@@ -56,11 +56,12 @@
     <div class="container mx-auto p-4">
         <div class="max-w-2xl mx-auto">
             <div class="bg-white p-8 rounded-lg shadow-md text-center">
-                <!-- Result Header (simplified) -->
+                <!-- Result Header (explicit pass/fail) -->
                 <div class="mb-8">
-                    <h2 class="text-3xl font-bold {% if passed %}text-green-600{% else %}text-blue-600{% endif %} mb-2">
-                        {{ 'Passed' if passed else 'Completed' }}
+                    <h2 class="text-3xl font-bold {% if passed %}text-green-600{% else %}text-red-600{% endif %} mb-2">
+                        {{ 'You have passed' if passed else 'You have failed' }}
                     </h2>
+                    <p class="text-gray-600">Passing score: {{ passing_score }}%</p>
                 </div>
                 
                 <!-- Score Display -->
