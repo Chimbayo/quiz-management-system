@@ -277,22 +277,32 @@ def create_quiz():
             options_list = request.form.getlist('options')
             correct_answers = request.form.getlist('correct_answer')
             points_list = request.form.getlist('points')
-            
-            # Insert questions safely using zip
-            for question, q_type, option_str, correct, points in zip(
-                questions, question_types, options_list, correct_answers, points_list
-            ):
-                if question.strip():  # Only insert if question text is not empty
-                    options = option_str.split('|') if option_str else []
-                    
-                    cur.execute(
-                        """
-                        INSERT INTO questions 
-                        (quiz_id, question_text, question_type, options, correct_answer, points) 
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                        """,
-                        (quiz_id, question, q_type, json.dumps(options), correct, int(points))
-                    )
+
+            # Insert questions by index to avoid zip truncation
+            total = max(len(questions), len(question_types), len(options_list), len(correct_answers), len(points_list))
+            for i in range(total):
+                question = (questions[i] if i < len(questions) else '').strip()
+                if not question:
+                    continue
+                q_type = question_types[i] if i < len(question_types) else 'multiple_choice'
+                option_str = options_list[i] if i < len(options_list) else ''
+                correct = correct_answers[i] if i < len(correct_answers) else ''
+                points = int(points_list[i]) if i < len(points_list) and points_list[i] else 1
+
+                # Auto-fill options for true/false
+                if q_type == 'true_false':
+                    options = ['True', 'False']
+                else:
+                    options = [o.strip() for o in (option_str.split('|') if option_str else []) if o.strip()]
+
+                cur.execute(
+                    """
+                    INSERT INTO questions 
+                    (quiz_id, question_text, question_type, options, correct_answer, points) 
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (quiz_id, question, q_type, json.dumps(options), correct, points)
+                )
             
             conn.commit()
             flash('Quiz created successfully!', 'success')

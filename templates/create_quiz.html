@@ -78,11 +78,11 @@
             
             if (select.value === 'true_false') {
                 optionsInput.value = 'True|False';
-                optionsInput.disabled = true;
+                optionsInput.readOnly = true;
                 optionsInput.classList.add('bg-gray-100');
             } else {
                 optionsInput.value = '';
-                optionsInput.disabled = false;
+                optionsInput.readOnly = false;
                 optionsInput.classList.remove('bg-gray-100');
             }
         }
