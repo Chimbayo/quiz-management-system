@@ -558,6 +558,11 @@ def delete_quiz(quiz_id):
         cur.close()
         conn.close()
 
+@app.route('/admin/quiz/delete/<int:quiz_id>', methods=['POST'])
+def delete_quiz_post(quiz_id):
+    # POST fallback for environments that block DELETE
+    return delete_quiz(quiz_id)
+
 @app.route('/admin/quiz/edit/<int:quiz_id>', methods=['POST'])
 def edit_quiz(quiz_id):
     if 'user_id' not in session or session.get('role') != 'admin':
@@ -600,7 +605,7 @@ def get_quiz(quiz_id):
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     
     try:
-        cur.execute("SELECT * FROM quizzes WHERE id = %s AND created_by = %s", (quiz_id, session['user_id']))
+        cur.execute("SELECT id, title, description, passing_score FROM quizzes WHERE id = %s AND created_by = %s", (quiz_id, session['user_id']))
         quiz = cur.fetchone()
         
         if quiz:
@@ -645,6 +650,11 @@ def delete_user(user_id):
         cur.close()
         conn.close()
 
+@app.route('/admin/user/delete/<int:user_id>', methods=['POST'])
+def delete_user_post(user_id):
+    # POST fallback for environments that block DELETE
+    return delete_user(user_id)
+
 @app.route('/admin/user/edit/<int:user_id>', methods=['POST'])
 def edit_user(user_id):
     if 'user_id' not in session or session.get('role') != 'admin':
@@ -687,7 +697,7 @@ def get_user(user_id):
     cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
     
     try:
-        cur.execute("SELECT id, username, email, role, created_at FROM users WHERE id = %s", (user_id,))
+        cur.execute("SELECT id, username, email, role FROM users WHERE id = %s", (user_id,))
         user = cur.fetchone()
         
         if user:
