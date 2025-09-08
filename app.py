@@ -202,6 +202,7 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        portal = request.form.get('portal', 'student')
         
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -213,6 +214,14 @@ def login():
         conn.close()
         
         if user and bcrypt.check_password_hash(user['password'], password):
+            # Enforce role based on chosen portal
+            if portal == 'admin' and user['role'] != 'admin':
+                flash('Invalid portal for this account. Please use the Student portal.', 'error')
+                return render_template('login.html')
+            if portal == 'student' and user['role'] == 'admin':
+                # Allow admin to still choose admin portal instead
+                flash('Admin accounts should use the Admin portal.', 'error')
+                return render_template('login.html')
             session['user_id'] = user['id']
             session['username'] = user['username']
             session['role'] = user['role']
