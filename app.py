@@ -114,6 +114,28 @@ def init_db():
     except Exception:
         pass
     
+    # Ensure ON DELETE CASCADE on quiz_attempts.user_id (best-effort for existing DBs)
+    try:
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.table_constraints tc
+                    WHERE tc.constraint_name = 'quiz_attempts_user_id_fkey'
+                      AND tc.table_name = 'quiz_attempts'
+                ) THEN
+                    ALTER TABLE quiz_attempts DROP CONSTRAINT quiz_attempts_user_id_fkey;
+                END IF;
+            END$$;
+        """)
+        cur.execute("""
+            ALTER TABLE quiz_attempts
+            ADD CONSTRAINT quiz_attempts_user_id_fkey
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        """)
+    except Exception:
+        pass
+    
     # Create answers table
     cur.execute('''
         CREATE TABLE IF NOT EXISTS user_answers (
@@ -637,7 +659,9 @@ def delete_user(user_id):
         if not cur.fetchone():
             return jsonify({'error': 'User not found'}), 404
 
-        # Delete user (cascade will handle related data)
+        # Delete attempts explicitly first to avoid FK issues on older schemas
+        cur.execute("DELETE FROM quiz_attempts WHERE user_id = %s", (user_id,))
+        # Delete user (cascade will handle related data on modern schemas)
         cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
         conn.commit()
         
@@ -766,8 +790,11 @@ def attempt_quiz(quiz_id):
         questions = cur.fetchall()
         
         user_answers = []
+        missing_answer = False
         for question in questions:
             selected_answer = request.form.get(f'question_{question["id"]}')
+            if selected_answer is None or str(selected_answer).strip() == "":
+                missing_answer = True
             is_correct = selected_answer == question['correct_answer']
             
             if is_correct:
@@ -780,7 +807,19 @@ def attempt_quiz(quiz_id):
                 'selected_answer': selected_answer,
                 'is_correct': is_correct
             })
-        
+
+        # Deny submission if any question is unanswered
+        if missing_answer:
+            flash('Please answer all questions before submitting the quiz.', 'error')
+            # Re-render attempt page
+            cur.execute("SELECT * FROM quizzes WHERE id = %s", (quiz_id,))
+            quiz = cur.fetchone()
+            cur.execute("SELECT * FROM questions WHERE quiz_id = %s", (quiz_id,))
+            questions = cur.fetchall()
+            cur.close()
+            conn.close()
+            return render_template('attempt_quiz.html', quiz=quiz, questions=questions)
+
         # Calculate percentage
         percentage = (score / total_points) * 100 if total_points > 0 else 0
         

@@ -7,121 +7,9 @@
     <title>{{ quiz.title }} - Quiz Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script>
-        let currentQuestion = 1;
-        const totalQuestions = {{ questions|length }};
-        const durationMinutes = {{ quiz.duration_minutes or 0 }};
-        let remainingSeconds = durationMinutes > 0 ? durationMinutes * 60 : 0;
-        let countdownTimer = null;
-        
-        function showQuestion(questionNum) {
-            // Hide all questions
-            document.querySelectorAll('.question-container').forEach(q => q.classList.add('hidden'));
-            // Show current question
-            document.getElementById(`question-${questionNum}`).classList.remove('hidden');
-            
-            // Update progress bar
-            const progress = (questionNum / totalQuestions) * 100;
-            document.getElementById('progress-bar').style.width = progress + '%';
-            document.getElementById('progress-text').textContent = `${questionNum} of ${totalQuestions}`;
-            
-            // Update navigation buttons
-            document.getElementById('prev-btn').disabled = questionNum === 1;
-            document.getElementById('next-btn').textContent = questionNum === totalQuestions ? 'Submit Quiz' : 'Next Question';
-            document.getElementById('next-btn').className = questionNum === totalQuestions ? 
-                'bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200' :
-                'bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200';
-        }
-        
-        function nextQuestion() {
-            if (currentQuestion < totalQuestions) {
-                currentQuestion++;
-                showQuestion(currentQuestion);
-            }
-        }
-        
-        function prevQuestion() {
-            if (currentQuestion > 1) {
-                currentQuestion--;
-                showQuestion(currentQuestion);
-            }
-        }
-        
-        function validateForm() {
-            const questions = document.querySelectorAll('.question-container');
-            let isValid = true;
-            let firstUnanswered = null;
-            
-            questions.forEach((question, index) => {
-                const radioButtons = question.querySelectorAll('input[type="radio"]');
-                const isAnswered = Array.from(radioButtons).some(radio => radio.checked);
-                
-                if (!isAnswered) {
-                    isValid = false;
-                    if (firstUnanswered === null) {
-                        firstUnanswered = index + 1;
-                    }
-                    question.classList.add('border-red-300', 'bg-red-50');
-                } else {
-                    question.classList.remove('border-red-300', 'bg-red-50');
-                }
-            });
-            
-            if (!isValid) {
-                alert(`Please answer all questions before submitting. You can navigate to unanswered questions using the navigation buttons.`);
-                if (firstUnanswered) {
-                    currentQuestion = firstUnanswered;
-                    showQuestion(currentQuestion);
-                }
-                return false;
-            }
-            
-            return true;
-        }
-        
-        function startCountdown() {
-            if (durationMinutes <= 0) return;
-            const timerEl = document.getElementById('countdown-timer');
-            const formEl = document.getElementById('quiz-form');
-            function render() {
-                const m = Math.floor(remainingSeconds / 60);
-                const s = remainingSeconds % 60;
-                timerEl.textContent = `${m}:${s.toString().padStart(2,'0')}`;
-            }
-            render();
-            countdownTimer = setInterval(() => {
-                remainingSeconds -= 1;
-                if (remainingSeconds <= 0) {
-                    clearInterval(countdownTimer);
-                    render();
-                    // Auto-submit
-                    formEl.submit();
-                } else {
-                    render();
-                }
-            }, 1000);
-        }
-
-// Expose functions for inline handlers
-window.showQuestion = showQuestion;
-window.nextQuestion = nextQuestion;
-window.prevQuestion = prevQuestion;
-window.validateForm = validateForm;
-
-// Initialize root data, first question and timer
-document.addEventListener('DOMContentLoaded', function() {
-    rootEl = document.getElementById('quiz-root');
-    if (rootEl) {
-        totalQuestions = parseInt(rootEl.dataset.totalQuestions, 10) || 0;
-        durationMinutes = parseInt(rootEl.dataset.durationMinutes, 10) || 0;
-        remainingSeconds = durationMinutes > 0 ? durationMinutes * 60 : 0;
-    }
-    showQuestion(1);
-    startCountdown();
-});
-</script>
+    <script src="{{ url_for('static', filename='js/attempt_quiz.js') }}" defer></script>
 </head>
-<body class="bg-gray-100 min-h-screen" id="quiz-root" data-total-questions="0" data-duration-minutes="0">
+<body class="bg-gray-100 min-h-screen" id="quiz-root" data-total-questions="{{ questions|length }}" data-duration-minutes="{{ quiz.duration_minutes or 0 }}">
     <nav class="bg-gradient-to-r from-green-600 to-green-800 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold flex items-center">
@@ -159,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span class="text-sm font-medium text-gray-700" id="progress-text">1 of {{ questions|length }}</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-3">
-                        <div class="bg-blue-500 h-3 rounded-full transition-all duration-300" id="progress-bar" style="width: {{ (1 / questions|length) * 100 }}%"></div>
+                        <div class="bg-blue-500 h-3 rounded-full transition-all duration-300" id="progress-bar" style="width: 0%"></div>
                     </div>
                 </div>
                 
@@ -239,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <div class="flex space-x-2">
                         {% for i in range(1, questions|length + 1) %}
-                        <button type="button" onclick="showQuestion({{ i }})" class="w-10 h-10 rounded-lg border border-gray-300 text-gray-600 hover:bg-blue-50 hover:border-blue-300 transition-colors duration-200">
+                        <button type="button" class="nav-btn w-10 h-10 rounded-lg border border-gray-300 text-gray-600 hover:bg-blue-50 hover:border-blue-300 transition-colors duration-200" data-question-index="{{ i }}">
                             {{ i }}
                         </button>
                         {% endfor %}
